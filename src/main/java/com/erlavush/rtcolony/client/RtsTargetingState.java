@@ -1,5 +1,6 @@
 package com.erlavush.rtcolony.client;
 
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -20,7 +21,6 @@ import net.minecraft.world.phys.Vec3;
 
 public final class RtsTargetingState {
     private static final double PICK_DISTANCE = 160.0D;
-    private static final Vec3 WORLD_UP = new Vec3(0.0D, 1.0D, 0.0D);
 
     private static HitResult hoverHit;
     private static TargetSnapshot hoveredTarget;
@@ -65,8 +65,9 @@ public final class RtsTargetingState {
     }
 
     private static HitResult raycastFromCursor(Minecraft minecraft) {
-        Vec3 origin = RtsCameraState.getCameraPosition();
-        Vec3 direction = getCursorRayDirection(minecraft);
+        Camera camera = minecraft.gameRenderer.getMainCamera();
+        Vec3 origin = camera.isInitialized() ? camera.getPosition() : RtsCameraState.getCameraPosition();
+        Vec3 direction = getCursorRayDirection(minecraft, camera);
         Vec3 end = origin.add(direction.scale(PICK_DISTANCE));
         BlockHitResult blockHit = minecraft.level.clip(new ClipContext(
                 origin,
@@ -100,7 +101,7 @@ public final class RtsTargetingState {
         return blockHit;
     }
 
-    private static Vec3 getCursorRayDirection(Minecraft minecraft) {
+    private static Vec3 getCursorRayDirection(Minecraft minecraft, Camera camera) {
         double mouseX = Mth.clamp(minecraft.mouseHandler.xpos(), 0.0D, minecraft.getWindow().getScreenWidth());
         double mouseY = Mth.clamp(minecraft.mouseHandler.ypos(), 0.0D, minecraft.getWindow().getScreenHeight());
         double width = Math.max(1, minecraft.getWindow().getScreenWidth());
@@ -108,20 +109,11 @@ public final class RtsTargetingState {
         double normalizedX = mouseX / width * 2.0D - 1.0D;
         double normalizedY = 1.0D - mouseY / height * 2.0D;
 
-        Vec3 forward = Vec3.directionFromRotation(RtsCameraState.getPitch(), RtsCameraState.getYaw()).normalize();
-        Vec3 right = forward.cross(WORLD_UP).normalize();
-        if (right.lengthSqr() < 1.0E-8D) {
-            right = Vec3.directionFromRotation(0.0F, RtsCameraState.getYaw() - 90.0F).multiply(1.0D, 0.0D, 1.0D).normalize();
+        if (camera.isInitialized()) {
+            return camera.getNearPlane().getPointOnPlane((float) normalizedX, (float) normalizedY).normalize();
         }
-        Vec3 up = right.cross(forward).normalize();
 
-        double verticalFov = Mth.clamp(minecraft.options.fov().get(), 30, 110);
-        double tangent = Math.tan(Math.toRadians(verticalFov) * 0.5D);
-        double aspect = width / height;
-        return forward
-                .add(right.scale(normalizedX * tangent * aspect))
-                .add(up.scale(normalizedY * tangent))
-                .normalize();
+        return Vec3.directionFromRotation(RtsCameraState.getPitch(), RtsCameraState.getYaw()).normalize();
     }
 
     public record TargetSnapshot(
