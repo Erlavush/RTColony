@@ -52,7 +52,6 @@ public final class RTColonyClientEvents {
         }
 
         Input input = event.getInput();
-        RtsCameraState.pan(input.leftImpulse, input.forwardImpulse);
         input.left = false;
         input.right = false;
         input.up = false;

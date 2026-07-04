@@ -14,27 +14,36 @@ public final class RtsCameraState {
     private static final float MAX_DISTANCE = 128.0F;
     private static final float ROTATE_DEGREES_PER_TICK = 2.5F;
     private static final float ZOOM_STEP = 4.0F;
+    private static final double RENDER_SMOOTHING_PER_SECOND = 24.0D;
 
     private static boolean active;
-    private static double centerX;
-    private static double centerY;
-    private static double centerZ;
-    private static float yaw = DEFAULT_YAW;
-    private static float pitch = DEFAULT_PITCH;
-    private static float distance = DEFAULT_DISTANCE;
+    private static double targetCenterX;
+    private static double targetCenterY;
+    private static double targetCenterZ;
+    private static float targetYaw = DEFAULT_YAW;
+    private static float targetPitch = DEFAULT_PITCH;
+    private static float targetDistance = DEFAULT_DISTANCE;
+    private static double renderCenterX;
+    private static double renderCenterY;
+    private static double renderCenterZ;
+    private static float renderYaw = DEFAULT_YAW;
+    private static float renderPitch = DEFAULT_PITCH;
+    private static float renderDistance = DEFAULT_DISTANCE;
+    private static long lastRenderNanos;
 
     private RtsCameraState() {
     }
 
     public static void activateFromPlayer(LocalPlayer player) {
         if (player != null) {
-            centerX = player.getX();
-            centerY = player.getY() + 1.0D;
-            centerZ = player.getZ();
+            targetCenterX = player.getX();
+            targetCenterY = player.getY() + 1.0D;
+            targetCenterZ = player.getZ();
         }
-        yaw = DEFAULT_YAW;
-        pitch = DEFAULT_PITCH;
-        distance = DEFAULT_DISTANCE;
+        targetYaw = DEFAULT_YAW;
+        targetPitch = DEFAULT_PITCH;
+        targetDistance = DEFAULT_DISTANCE;
+        resetRenderState();
         active = player != null;
     }
 
@@ -46,6 +55,7 @@ public final class RtsCameraState {
 
     public static void deactivate() {
         active = false;
+        lastRenderNanos = 0L;
     }
 
     public static boolean isActive() {
@@ -53,36 +63,56 @@ public final class RtsCameraState {
     }
 
     public static float getYaw() {
-        return yaw;
+        return renderYaw;
     }
 
     public static float getPitch() {
-        return pitch;
+        return renderPitch;
     }
 
     public static float getDistance() {
-        return distance;
+        return renderDistance;
     }
 
     public static Vec3 getCenter() {
-        return new Vec3(centerX, centerY, centerZ);
+        return new Vec3(renderCenterX, renderCenterY, renderCenterZ);
     }
 
     public static Vec3 getCameraPosition() {
-        Vec3 lookDirection = Vec3.directionFromRotation(pitch, yaw).normalize();
-        return getCenter().subtract(lookDirection.scale(distance));
+        Vec3 lookDirection = Vec3.directionFromRotation(renderPitch, renderYaw).normalize();
+        return getCenter().subtract(lookDirection.scale(renderDistance));
+    }
+
+    public static void advanceRenderState() {
+        if (!active) {
+            return;
+        }
+
+        long now = System.nanoTime();
+        double elapsedSeconds = lastRenderNanos == 0L
+                ? 1.0D / 60.0D
+                : Mth.clamp((now - lastRenderNanos) / 1_000_000_000.0D, 0.0D, 0.1D);
+        lastRenderNanos = now;
+
+        double alpha = 1.0D - Math.exp(-RENDER_SMOOTHING_PER_SECOND * elapsedSeconds);
+        renderCenterX = Mth.lerp(alpha, renderCenterX, targetCenterX);
+        renderCenterY = Mth.lerp(alpha, renderCenterY, targetCenterY);
+        renderCenterZ = Mth.lerp(alpha, renderCenterZ, targetCenterZ);
+        renderYaw = Mth.rotLerp((float) alpha, renderYaw, targetYaw);
+        renderPitch = Mth.lerp((float) alpha, renderPitch, targetPitch);
+        renderDistance = Mth.lerp((float) alpha, renderDistance, targetDistance);
     }
 
     public static void rotateLeft() {
-        yaw = Mth.wrapDegrees(yaw - ROTATE_DEGREES_PER_TICK);
+        targetYaw = Mth.wrapDegrees(targetYaw - ROTATE_DEGREES_PER_TICK);
     }
 
     public static void rotateRight() {
-        yaw = Mth.wrapDegrees(yaw + ROTATE_DEGREES_PER_TICK);
+        targetYaw = Mth.wrapDegrees(targetYaw + ROTATE_DEGREES_PER_TICK);
     }
 
     public static void zoom(double scrollDelta) {
-        distance = Mth.clamp((float) (distance - scrollDelta * ZOOM_STEP), MIN_DISTANCE, MAX_DISTANCE);
+        targetDistance = Mth.clamp((float) (targetDistance - scrollDelta * ZOOM_STEP), MIN_DISTANCE, MAX_DISTANCE);
     }
 
     public static void pan(float leftImpulse, float forwardImpulse) {
@@ -90,17 +120,40 @@ public final class RtsCameraState {
             return;
         }
 
-        Vec3 forward = Vec3.directionFromRotation(0.0F, yaw).multiply(1.0D, 0.0D, 1.0D).normalize();
+        Vec3 forward = Vec3.directionFromRotation(0.0F, targetYaw).multiply(1.0D, 0.0D, 1.0D).normalize();
         Vec3 left = new Vec3(forward.z, 0.0D, -forward.x);
-        double speed = Mth.clamp(distance / 48.0D, 0.35D, 2.5D);
+        double speed = Mth.clamp(targetDistance / 48.0D, 0.35D, 2.5D);
         Vec3 delta = forward.scale(forwardImpulse * speed).add(left.scale(leftImpulse * speed));
-        centerX += delta.x;
-        centerZ += delta.z;
+        targetCenterX += delta.x;
+        targetCenterZ += delta.z;
+    }
+
+    public static void panFromScreenDrag(double deltaX, double deltaY) {
+        if (!active || deltaX == 0.0D && deltaY == 0.0D) {
+            return;
+        }
+
+        Vec3 forward = Vec3.directionFromRotation(0.0F, targetYaw).multiply(1.0D, 0.0D, 1.0D).normalize();
+        Vec3 left = new Vec3(forward.z, 0.0D, -forward.x);
+        double worldUnitsPerPixel = Mth.clamp(targetDistance / 700.0D, 0.02D, 0.18D);
+        Vec3 delta = forward.scale(deltaY * worldUnitsPerPixel).add(left.scale(deltaX * worldUnitsPerPixel));
+        targetCenterX += delta.x;
+        targetCenterZ += delta.z;
     }
 
     public static void updateTerrainHeight(ClientLevel level) {
-        int height = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(centerX), Mth.floor(centerZ));
+        int height = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(targetCenterX), Mth.floor(targetCenterZ));
         double targetY = height + 1.0D;
-        centerY = Mth.lerp(0.12D, centerY, targetY);
+        targetCenterY = Mth.lerp(0.12D, targetCenterY, targetY);
+    }
+
+    private static void resetRenderState() {
+        renderCenterX = targetCenterX;
+        renderCenterY = targetCenterY;
+        renderCenterZ = targetCenterZ;
+        renderYaw = targetYaw;
+        renderPitch = targetPitch;
+        renderDistance = targetDistance;
+        lastRenderNanos = 0L;
     }
 }
