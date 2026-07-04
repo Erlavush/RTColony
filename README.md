@@ -30,6 +30,17 @@ Open the project in IntelliJ IDEA Community:
 
 The NeoForge scaffold is present. Use `./gradlew build` for the first verification pass.
 
+Run the development client:
+
+```bash
+./gradlew runClient
+```
+
+The `runClient` configuration is set to use NVIDIA PRIME offload on hybrid
+Intel/NVIDIA laptops. To confirm it, open the F3 screen in Minecraft and check that the
+renderer mentions NVIDIA, or run `nvidia-smi` in another terminal and look for the Java
+process while Minecraft is open.
+
 ## License
 
 RTColony is licensed under GPL-3.0-only.
