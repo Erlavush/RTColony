@@ -1,11 +1,12 @@
 .gradle/
+.cache/
 build/
 out/
 run/
 runs/
+references/
 .idea/
 *.iml
 *.log
 hs_err_pid*.log
 replay_pid*.log
-

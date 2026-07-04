@@ -10,7 +10,8 @@ MineColonies and Create integration.
 
 - Project directory: `/home/eru/RTColony`
 - Mod name: `RTColony`
-- No mod source has been scaffolded yet.
+- License: `GPL-3.0-only`
+- NeoForge scaffold exists once `./gradlew build` passes.
 - Java 21 JDK is reused from Prism Launcher and copied to:
   `/home/eru/.local/opt/jdks/minecraft-java-21`
 - Convenience commands:
@@ -27,6 +28,7 @@ MineColonies and Create integration.
 - Prefer Gradle wrapper tasks from the project once the NeoForge scaffold exists.
 - Use IntelliJ IDEA Community for Java editing/debugging.
 - Use the Prism-derived Java 21 JDK for Gradle and IDE project SDK.
+- Keep third-party reference clones under ignored `references/`.
 
 ## Planned Milestones
 
@@ -40,4 +42,3 @@ MineColonies and Create integration.
 8. Read-only MineColonies integration.
 9. Read-only Create integration.
 10. Controlled server-authoritative actions.
-

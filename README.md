@@ -28,4 +28,8 @@ Open the project in IntelliJ IDEA Community:
 ./open-idea.sh
 ```
 
-The NeoForge scaffold has not been generated yet.
+The NeoForge scaffold is present. Use `./gradlew build` for the first verification pass.
+
+## License
+
+RTColony is licensed under GPL-3.0-only.
