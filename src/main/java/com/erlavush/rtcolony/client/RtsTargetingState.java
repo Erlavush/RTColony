@@ -1,5 +1,6 @@
 package com.erlavush.rtcolony.client;
 
+import com.erlavush.rtcolony.mixin.GameRendererAccessor;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -18,6 +19,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 public final class RtsTargetingState {
     private static final double PICK_DISTANCE = 160.0D;
@@ -110,7 +114,16 @@ public final class RtsTargetingState {
         double normalizedY = 1.0D - mouseY / height * 2.0D;
 
         if (camera.isInitialized()) {
-            return camera.getNearPlane().getPointOnPlane((float) normalizedX, (float) normalizedY).normalize();
+            double fov = ((GameRendererAccessor) minecraft.gameRenderer).rtcolony$getFov(camera, camera.getPartialTickTime(), true);
+            Matrix4f inverseProjection = new Matrix4f(minecraft.gameRenderer.getProjectionMatrix(fov)).invert();
+            Vector4f cameraSpace = new Vector4f((float) normalizedX, (float) normalizedY, 1.0F, 1.0F).mul(inverseProjection);
+            if (Math.abs(cameraSpace.w()) > 1.0E-6F) {
+                cameraSpace.div(cameraSpace.w());
+            }
+
+            Vector3f worldSpace = new Vector3f(cameraSpace.x(), cameraSpace.y(), cameraSpace.z()).normalize();
+            worldSpace.rotate(camera.rotation()).normalize();
+            return new Vec3(worldSpace.x(), worldSpace.y(), worldSpace.z()).normalize();
         }
 
         return Vec3.directionFromRotation(RtsCameraState.getPitch(), RtsCameraState.getYaw()).normalize();
