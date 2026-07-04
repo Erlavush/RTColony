@@ -22,5 +22,10 @@ This project uses a Java 21 JDK copied from the local Prism Launcher runtime:
 source ./dev-env.sh
 ```
 
-The NeoForge scaffold has not been generated yet.
+Open the project in IntelliJ IDEA Community:
 
+```bash
+./open-idea.sh
+```
+
+The NeoForge scaffold has not been generated yet.
