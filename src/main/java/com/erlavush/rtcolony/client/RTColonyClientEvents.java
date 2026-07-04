@@ -106,6 +106,7 @@ public final class RTColonyClientEvents {
         int textWidth = minecraft.font.width(RTS_MODE_LABEL);
         guiGraphics.fill(6, 6, textWidth + 14, 22, 0xA0000000);
         guiGraphics.drawString(minecraft.font, RTS_MODE_LABEL, 10, 10, 0xFFFFFF, false);
+        RtsSelectionHud.render(minecraft, guiGraphics);
     }
 
     @SubscribeEvent
