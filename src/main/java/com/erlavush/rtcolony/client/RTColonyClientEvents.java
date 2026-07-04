@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -195,11 +196,25 @@ public final class RTColonyClientEvents {
         String title = trimToWidth(minecraft, selected.title().getString(), textWidth);
         String detail = trimToWidth(minecraft, selected.detail().getString(), textWidth);
 
-        guiGraphics.fill(x, y, x + width, y + height, 0xB0000000);
-        guiGraphics.fill(x, y, x + width, y + 1, 0xFF37D9FF);
-        guiGraphics.drawString(minecraft.font, SELECTED_LABEL, x + 8, y + 7, 0x37D9FF, false);
+        drawMinecraftPanel(guiGraphics, x, y, width, height);
+        guiGraphics.drawString(minecraft.font, SELECTED_LABEL, x + 8, y + 7, 0xA0A0A0, false);
         guiGraphics.drawString(minecraft.font, title, x + 8, y + 20, 0xFFFFFF, false);
-        guiGraphics.drawString(minecraft.font, detail, x + 8, y + 33, 0xBFC7D5, false);
+        guiGraphics.drawString(minecraft.font, detail, x + 8, y + 33, 0xA0A0A0, false);
+    }
+
+    private static void drawMinecraftPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        TooltipRenderUtil.renderTooltipBackground(
+                guiGraphics,
+                x,
+                y,
+                width,
+                height,
+                400,
+                0xF0100010,
+                0xF0100010,
+                0xFF606060,
+                0xFF2C2C2C
+        );
     }
 
     private static void drawTargetOutline(

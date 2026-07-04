@@ -109,11 +109,11 @@ public final class RtsTargetingState {
         double normalizedY = 1.0D - mouseY / height * 2.0D;
 
         Vec3 forward = Vec3.directionFromRotation(RtsCameraState.getPitch(), RtsCameraState.getYaw()).normalize();
-        Vec3 right = WORLD_UP.cross(forward).normalize();
+        Vec3 right = forward.cross(WORLD_UP).normalize();
         if (right.lengthSqr() < 1.0E-8D) {
-            right = Vec3.directionFromRotation(0.0F, RtsCameraState.getYaw() + 90.0F).multiply(1.0D, 0.0D, 1.0D).normalize();
+            right = Vec3.directionFromRotation(0.0F, RtsCameraState.getYaw() - 90.0F).multiply(1.0D, 0.0D, 1.0D).normalize();
         }
-        Vec3 up = forward.cross(right).normalize();
+        Vec3 up = right.cross(forward).normalize();
 
         double verticalFov = Mth.clamp(minecraft.options.fov().get(), 30, 110);
         double tangent = Math.tan(Math.toRadians(verticalFov) * 0.5D);
