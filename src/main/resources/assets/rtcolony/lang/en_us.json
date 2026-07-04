@@ -1,4 +1,5 @@
 {
-  "modmenu.nameTranslation.rtcolony": "RTColony"
+  "key.categories.rtcolony": "RTColony",
+  "key.rtcolony.toggle_rts_mode": "Toggle RTS Mode",
+  "rtcolony.hud.rts_mode": "RTColony: RTS mode ON"
 }
-
