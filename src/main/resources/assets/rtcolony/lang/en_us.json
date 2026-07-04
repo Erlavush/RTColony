@@ -3,6 +3,5 @@
   "key.rtcolony.toggle_rts_mode": "Toggle RTS Mode",
   "key.rtcolony.rotate_camera_left": "Rotate Camera Left",
   "key.rtcolony.rotate_camera_right": "Rotate Camera Right",
-  "rtcolony.hud.rts_mode": "RTColony: RTS mode ON",
-  "rtcolony.hud.selected": "Selected"
+  "rtcolony.hud.rts_mode": "RTColony: RTS mode ON"
 }

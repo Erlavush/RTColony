@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -23,7 +22,6 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 public final class RTColonyClientEvents {
     private static final Component RTS_MODE_LABEL = Component.translatable("rtcolony.hud.rts_mode");
-    private static final Component SELECTED_LABEL = Component.translatable("rtcolony.hud.selected");
     private static final int EDGE_PAN_PIXELS = 8;
 
     private RTColonyClientEvents() {
@@ -108,8 +106,6 @@ public final class RTColonyClientEvents {
         int textWidth = minecraft.font.width(RTS_MODE_LABEL);
         guiGraphics.fill(6, 6, textWidth + 14, 22, 0xA0000000);
         guiGraphics.drawString(minecraft.font, RTS_MODE_LABEL, 10, 10, 0xFFFFFF, false);
-
-        drawSelectedTargetHud(minecraft, guiGraphics);
     }
 
     @SubscribeEvent
@@ -177,46 +173,6 @@ public final class RTColonyClientEvents {
         RtsCameraState.pan(leftImpulse, forwardImpulse);
     }
 
-    private static void drawSelectedTargetHud(Minecraft minecraft, GuiGraphics guiGraphics) {
-        RtsTargetingState.TargetSnapshot selected = RtsTargetingState.getSelectedTarget();
-        if (selected == null) {
-            return;
-        }
-
-        int maxWidth = Math.min(280, Math.max(120, minecraft.getWindow().getGuiScaledWidth() - 12));
-        int contentWidth = Math.max(
-                Math.max(minecraft.font.width(SELECTED_LABEL), minecraft.font.width(selected.title())),
-                minecraft.font.width(selected.detail())
-        );
-        int width = Math.min(maxWidth, contentWidth + 18);
-        int x = 6;
-        int y = 28;
-        int height = 46;
-        int textWidth = width - 16;
-        String title = trimToWidth(minecraft, selected.title().getString(), textWidth);
-        String detail = trimToWidth(minecraft, selected.detail().getString(), textWidth);
-
-        drawMinecraftPanel(guiGraphics, x, y, width, height);
-        guiGraphics.drawString(minecraft.font, SELECTED_LABEL, x + 8, y + 7, 0xA0A0A0, false);
-        guiGraphics.drawString(minecraft.font, title, x + 8, y + 20, 0xFFFFFF, false);
-        guiGraphics.drawString(minecraft.font, detail, x + 8, y + 33, 0xA0A0A0, false);
-    }
-
-    private static void drawMinecraftPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        TooltipRenderUtil.renderTooltipBackground(
-                guiGraphics,
-                x,
-                y,
-                width,
-                height,
-                400,
-                0xF0100010,
-                0xF0100010,
-                0xFF606060,
-                0xFF2C2C2C
-        );
-    }
-
     private static void drawTargetOutline(
             PoseStack poseStack,
             VertexConsumer consumer,
@@ -241,15 +197,5 @@ public final class RTColonyClientEvents {
                 blue,
                 alpha
         );
-    }
-
-    private static String trimToWidth(Minecraft minecraft, String text, int width) {
-        if (minecraft.font.width(text) <= width) {
-            return text;
-        }
-
-        String ellipsis = "...";
-        int bodyWidth = Math.max(0, width - minecraft.font.width(ellipsis));
-        return minecraft.font.plainSubstrByWidth(text, bodyWidth) + ellipsis;
     }
 }
