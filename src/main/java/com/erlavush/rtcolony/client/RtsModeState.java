@@ -1,6 +1,7 @@
 package com.erlavush.rtcolony.client;
 
 import com.erlavush.rtcolony.RTColony;
+import net.minecraft.client.Minecraft;
 
 public final class RtsModeState {
     private static boolean enabled;
@@ -22,6 +23,16 @@ public final class RtsModeState {
         }
 
         RtsModeState.enabled = enabled;
+        if (enabled) {
+            RtsCameraState.activateFromPlayer(Minecraft.getInstance().player);
+            Minecraft.getInstance().mouseHandler.releaseMouse();
+        } else {
+            RtsCameraState.deactivate();
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.screen == null && minecraft.isWindowActive()) {
+                minecraft.mouseHandler.grabMouse();
+            }
+        }
         RTColony.LOGGER.info("RTS mode {}", enabled ? "enabled" : "disabled");
     }
 }
