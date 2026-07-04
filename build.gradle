@@ -43,6 +43,19 @@ neoForge {
             environment '__VK_LAYER_NV_optimus', 'NVIDIA_only'
         }
 
+        quickClient {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            programArgument '--quickPlaySingleplayer'
+            programArgument 'RTCOLONY'
+
+            // Hybrid Intel/NVIDIA laptops need PRIME offload flags for Minecraft to render on the dGPU.
+            environment 'DRI_PRIME', '1'
+            environment '__NV_PRIME_RENDER_OFFLOAD', '1'
+            environment '__GLX_VENDOR_LIBRARY_NAME', 'nvidia'
+            environment '__VK_LAYER_NV_optimus', 'NVIDIA_only'
+        }
+
         server {
             server()
             programArgument '--nogui'

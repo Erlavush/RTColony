@@ -36,6 +36,12 @@ Run the development client:
 ./gradlew runClient
 ```
 
+Run the development client and directly open the `RTCOLONY` singleplayer world:
+
+```bash
+./gradlew runQuickClient
+```
+
 The `runClient` configuration is set to use NVIDIA PRIME offload on hybrid
 Intel/NVIDIA laptops. To confirm it, open the F3 screen in Minecraft and check that the
 renderer mentions NVIDIA, or run `nvidia-smi` in another terminal and look for the Java
