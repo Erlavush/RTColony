@@ -2,11 +2,13 @@ package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsCameraState;
 import com.erlavush.rtcolony.client.RtsModeState;
+import com.erlavush.rtcolony.client.RtsTargetingState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
+import org.lwjgl.glfw.GLFW;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -24,7 +26,7 @@ public abstract class MouseHandlerMixin {
     private double ypos;
 
     @Shadow
-    private boolean isMiddlePressed;
+    private boolean isLeftPressed;
 
     @Shadow
     private boolean ignoreFirstMove;
@@ -37,7 +39,7 @@ public abstract class MouseHandlerMixin {
     }
 
     @Inject(method = "onMove", at = @At("HEAD"))
-    private void rtcolony$panRtsCameraFromMiddleDrag(long window, double mouseX, double mouseY, CallbackInfo ci) {
+    private void rtcolony$panRtsCameraFromLeftDrag(long window, double mouseX, double mouseY, CallbackInfo ci) {
         if (!RtsModeState.isEnabled() || !RtsCameraState.isActive()) {
             return;
         }
@@ -46,10 +48,24 @@ public abstract class MouseHandlerMixin {
                 || !this.minecraft.isWindowActive()
                 || this.minecraft.screen != null
                 || this.ignoreFirstMove
-                || !this.isMiddlePressed) {
+                || !this.isLeftPressed) {
             return;
         }
 
         RtsCameraState.panFromScreenDrag(mouseX - this.xpos, mouseY - this.ypos);
+    }
+
+    @Inject(method = "onPress", at = @At("TAIL"))
+    private void rtcolony$selectRtsTarget(long window, int button, int action, int mods, CallbackInfo ci) {
+        if (!RtsModeState.isEnabled()
+                || window != this.minecraft.getWindow().getWindow()
+                || this.minecraft.screen != null
+                || button != GLFW.GLFW_MOUSE_BUTTON_RIGHT
+                || action != GLFW.GLFW_PRESS) {
+            return;
+        }
+
+        RtsTargetingState.updateHover(this.minecraft);
+        RtsTargetingState.selectHovered();
     }
 }

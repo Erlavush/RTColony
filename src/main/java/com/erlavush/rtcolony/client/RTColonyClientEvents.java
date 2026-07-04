@@ -1,9 +1,16 @@
 package com.erlavush.rtcolony.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.Input;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -11,9 +18,11 @@ import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.RenderArmEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 public final class RTColonyClientEvents {
     private static final Component RTS_MODE_LABEL = Component.translatable("rtcolony.hud.rts_mode");
+    private static final Component SELECTED_LABEL = Component.translatable("rtcolony.hud.selected");
     private static final int EDGE_PAN_PIXELS = 8;
 
     private RTColonyClientEvents() {
@@ -42,6 +51,7 @@ public final class RTColonyClientEvents {
             minecraft.mouseHandler.releaseMouse();
             updateRotationKeys();
             updateEdgePanning(minecraft);
+            RtsTargetingState.updateHover(minecraft);
         }
     }
 
@@ -97,6 +107,38 @@ public final class RTColonyClientEvents {
         int textWidth = minecraft.font.width(RTS_MODE_LABEL);
         guiGraphics.fill(6, 6, textWidth + 14, 22, 0xA0000000);
         guiGraphics.drawString(minecraft.font, RTS_MODE_LABEL, 10, 10, 0xFFFFFF, false);
+
+        drawSelectedTargetHud(minecraft, guiGraphics);
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (!RtsModeState.isEnabled() || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+            return;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null || minecraft.player == null || minecraft.screen != null) {
+            return;
+        }
+
+        RtsTargetingState.updateHover(minecraft);
+        MultiBufferSource.BufferSource bufferSource = minecraft.renderBuffers().bufferSource();
+        VertexConsumer consumer = bufferSource.getBuffer(RenderType.lines());
+        Vec3 camera = event.getCamera().getPosition();
+        PoseStack poseStack = event.getPoseStack();
+
+        RtsTargetingState.TargetSnapshot selected = RtsTargetingState.getSelectedTarget();
+        if (selected != null) {
+            drawTargetOutline(poseStack, consumer, camera, selected, 0.2F, 0.95F, 1.0F, 1.0F);
+        }
+
+        RtsTargetingState.TargetSnapshot hovered = RtsTargetingState.getHoveredTarget();
+        if (hovered != null && !hovered.sameTarget(selected)) {
+            drawTargetOutline(poseStack, consumer, camera, hovered, 1.0F, 0.9F, 0.25F, 1.0F);
+        }
+
+        bufferSource.endBatch(RenderType.lines());
     }
 
     private static void updateRotationKeys() {
@@ -109,7 +151,7 @@ public final class RTColonyClientEvents {
     }
 
     private static void updateEdgePanning(Minecraft minecraft) {
-        if (!minecraft.isWindowActive()) {
+        if (!minecraft.isWindowActive() || minecraft.mouseHandler.isLeftPressed()) {
             return;
         }
 
@@ -132,5 +174,67 @@ public final class RTColonyClientEvents {
         }
 
         RtsCameraState.pan(leftImpulse, forwardImpulse);
+    }
+
+    private static void drawSelectedTargetHud(Minecraft minecraft, GuiGraphics guiGraphics) {
+        RtsTargetingState.TargetSnapshot selected = RtsTargetingState.getSelectedTarget();
+        if (selected == null) {
+            return;
+        }
+
+        int maxWidth = Math.min(280, Math.max(120, minecraft.getWindow().getGuiScaledWidth() - 12));
+        int contentWidth = Math.max(
+                Math.max(minecraft.font.width(SELECTED_LABEL), minecraft.font.width(selected.title())),
+                minecraft.font.width(selected.detail())
+        );
+        int width = Math.min(maxWidth, contentWidth + 18);
+        int x = 6;
+        int y = 28;
+        int height = 46;
+        int textWidth = width - 16;
+        String title = trimToWidth(minecraft, selected.title().getString(), textWidth);
+        String detail = trimToWidth(minecraft, selected.detail().getString(), textWidth);
+
+        guiGraphics.fill(x, y, x + width, y + height, 0xB0000000);
+        guiGraphics.fill(x, y, x + width, y + 1, 0xFF37D9FF);
+        guiGraphics.drawString(minecraft.font, SELECTED_LABEL, x + 8, y + 7, 0x37D9FF, false);
+        guiGraphics.drawString(minecraft.font, title, x + 8, y + 20, 0xFFFFFF, false);
+        guiGraphics.drawString(minecraft.font, detail, x + 8, y + 33, 0xBFC7D5, false);
+    }
+
+    private static void drawTargetOutline(
+            PoseStack poseStack,
+            VertexConsumer consumer,
+            Vec3 camera,
+            RtsTargetingState.TargetSnapshot target,
+            float red,
+            float green,
+            float blue,
+            float alpha
+    ) {
+        AABB outline = target.outlineBox();
+        if (outline == null) {
+            return;
+        }
+
+        LevelRenderer.renderLineBox(
+                poseStack,
+                consumer,
+                outline.move(-camera.x, -camera.y, -camera.z),
+                red,
+                green,
+                blue,
+                alpha
+        );
+    }
+
+    private static String trimToWidth(Minecraft minecraft, String text, int width) {
+        if (minecraft.font.width(text) <= width) {
+            return text;
+        }
+
+        String ellipsis = "...";
+        int bodyWidth = Math.max(0, width - minecraft.font.width(ellipsis));
+        return minecraft.font.plainSubstrByWidth(text, bodyWidth) + ellipsis;
     }
 }
