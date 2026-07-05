@@ -23,6 +23,12 @@ MineColonies and Create integration.
 - Keep this project separate from `/home/eru/Minecraft-AeroCreate-Server`.
 - Do not modify the live AeroCreate server, client instance, or distributed pack while
   working on RTColony unless explicitly requested.
+- Treat `references/reignofnether`, `references/minefortress`, and
+  `references/minecolonies` as the design source of truth. Do not invent a custom HUD,
+  camera, or colony UI style when a compatible reference pattern exists.
+- Copy or closely port reference code/assets when licenses allow it, then adapt only what
+  is necessary for NeoForge 1.21.1 and RTColony's package/API boundaries.
+- Keep copied/adapted third-party material attributed in `THIRD_PARTY_NOTICES.md`.
 - Start with a small NeoForge 1.21.1 client-side prototype before adding MineColonies or
   Create dependencies.
 - Prefer Gradle wrapper tasks from the project once the NeoForge scaffold exists.

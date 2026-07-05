@@ -1,38 +1,94 @@
 package com.erlavush.rtcolony.client;
 
+import com.erlavush.rtcolony.RTColony;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 
+/*
+ * Adapted from Reign of Nether's MyRenderer frame/icon helpers.
+ */
 final class RtsHudFrameRenderer {
+    private static final int FRAME_EDGE_THICKNESS = 4;
+
     private RtsHudFrameRenderer() {
     }
 
-    static void drawPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        guiGraphics.fill(x, y, x + width, y + height, 0xE0000000);
-        guiGraphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, 0xC0202020);
+    static void drawFrameWithBg(GuiGraphics guiGraphics, int x, int y, int width, int height, int bgColor) {
+        guiGraphics.fill(x + 2, y + 2, x + width - 2, y + height - 2, bgColor);
 
-        guiGraphics.fill(x, y, x + width, y + 1, 0xFFE0E0E0);
-        guiGraphics.fill(x, y, x + 1, y + height, 0xFFE0E0E0);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + 2, 0xFF7A7A7A);
-        guiGraphics.fill(x + 1, y + 1, x + 2, y + height - 1, 0xFF7A7A7A);
+        ResourceLocation iconFrameResource = hudTexture("unit_frame_left" + (height < 50 ? "_small" : "") + ".png");
+        RenderSystem.setShaderTexture(0, iconFrameResource);
+        guiGraphics.blit(
+                iconFrameResource,
+                x,
+                y,
+                0,
+                0.0F,
+                0.0F,
+                FRAME_EDGE_THICKNESS,
+                height,
+                FRAME_EDGE_THICKNESS,
+                height
+        );
 
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, 0xFF151515);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, 0xFF151515);
-        guiGraphics.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, 0xFF3A3A3A);
-        guiGraphics.fill(x + width - 2, y + 1, x + width - 1, y + height - 1, 0xFF3A3A3A);
+        iconFrameResource = hudTexture("unit_frame_right" + (height < 50 ? "_small" : "") + ".png");
+        RenderSystem.setShaderTexture(0, iconFrameResource);
+        guiGraphics.blit(
+                iconFrameResource,
+                x + width - FRAME_EDGE_THICKNESS,
+                y,
+                0,
+                0.0F,
+                0.0F,
+                FRAME_EDGE_THICKNESS,
+                height,
+                FRAME_EDGE_THICKNESS,
+                height
+        );
+
+        iconFrameResource = hudTexture("unit_frame_top.png");
+        RenderSystem.setShaderTexture(0, iconFrameResource);
+        guiGraphics.blit(
+                iconFrameResource,
+                x + FRAME_EDGE_THICKNESS,
+                y,
+                0,
+                0.0F,
+                0.0F,
+                width - FRAME_EDGE_THICKNESS * 2,
+                FRAME_EDGE_THICKNESS,
+                width,
+                FRAME_EDGE_THICKNESS
+        );
+
+        iconFrameResource = hudTexture("unit_frame_bottom.png");
+        RenderSystem.setShaderTexture(0, iconFrameResource);
+        guiGraphics.blit(
+                iconFrameResource,
+                x + FRAME_EDGE_THICKNESS,
+                y + height - FRAME_EDGE_THICKNESS,
+                0,
+                0.0F,
+                0.0F,
+                width - FRAME_EDGE_THICKNESS * 2,
+                FRAME_EDGE_THICKNESS,
+                width,
+                FRAME_EDGE_THICKNESS
+        );
     }
 
-    static void drawInset(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        guiGraphics.fill(x, y, x + width, y + height, 0xFF0A0A0A);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xB0303030);
+    static void renderIcon(GuiGraphics guiGraphics, ResourceLocation icon, int x, int y, int size) {
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        RenderSystem.setShaderTexture(0, icon);
+        guiGraphics.blit(icon, x, y, 0, 0.0F, 0.0F, size, size, size, size);
+    }
 
-        guiGraphics.fill(x, y, x + width, y + 1, 0xFF151515);
-        guiGraphics.fill(x, y, x + 1, y + height, 0xFF151515);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + 2, 0xFF3A3A3A);
-        guiGraphics.fill(x + 1, y + 1, x + 2, y + height - 1, 0xFF3A3A3A);
+    static ResourceLocation itemIcon(String fileName) {
+        return ResourceLocation.fromNamespaceAndPath(RTColony.MOD_ID, "textures/icons/items/" + fileName);
+    }
 
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, 0xFFE0E0E0);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, 0xFFE0E0E0);
-        guiGraphics.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, 0xFF7A7A7A);
-        guiGraphics.fill(x + width - 2, y + 1, x + width - 1, y + height - 1, 0xFF7A7A7A);
+    private static ResourceLocation hudTexture(String fileName) {
+        return ResourceLocation.fromNamespaceAndPath(RTColony.MOD_ID, "textures/hud/" + fileName);
     }
 }

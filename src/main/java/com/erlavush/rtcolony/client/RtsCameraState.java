@@ -12,7 +12,7 @@ public final class RtsCameraState {
     private static final float DEFAULT_DISTANCE = 48.0F;
     private static final float MIN_DISTANCE = 14.0F;
     private static final float MAX_DISTANCE = 128.0F;
-    private static final float ROTATE_DEGREES_PER_TICK = 2.5F;
+    private static final float DRAG_ROTATE_DEGREES_PER_PIXEL = 0.18F;
     private static final float ZOOM_STEP = 4.0F;
     private static final double RENDER_SMOOTHING_PER_SECOND = 24.0D;
 
@@ -103,14 +103,6 @@ public final class RtsCameraState {
         renderDistance = Mth.lerp((float) alpha, renderDistance, targetDistance);
     }
 
-    public static void rotateLeft() {
-        targetYaw = Mth.wrapDegrees(targetYaw - ROTATE_DEGREES_PER_TICK);
-    }
-
-    public static void rotateRight() {
-        targetYaw = Mth.wrapDegrees(targetYaw + ROTATE_DEGREES_PER_TICK);
-    }
-
     public static void zoom(double scrollDelta) {
         targetDistance = Mth.clamp((float) (targetDistance - scrollDelta * ZOOM_STEP), MIN_DISTANCE, MAX_DISTANCE);
     }
@@ -139,6 +131,14 @@ public final class RtsCameraState {
         Vec3 delta = forward.scale(deltaY * worldUnitsPerPixel).add(left.scale(deltaX * worldUnitsPerPixel));
         targetCenterX += delta.x;
         targetCenterZ += delta.z;
+    }
+
+    public static void rotateFromScreenDrag(double deltaX) {
+        if (!active || deltaX == 0.0D) {
+            return;
+        }
+
+        targetYaw = Mth.wrapDegrees((float) (targetYaw + deltaX * DRAG_ROTATE_DEGREES_PER_PIXEL));
     }
 
     public static void updateTerrainHeight(ClientLevel level) {

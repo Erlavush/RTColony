@@ -64,6 +64,10 @@ public final class RtsTargetingState {
         return hoveredTarget;
     }
 
+    public static HitResult getHoverHit() {
+        return hoverHit;
+    }
+
     public static TargetSnapshot getSelectedTarget() {
         return selectedTarget;
     }

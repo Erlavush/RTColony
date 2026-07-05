@@ -4,6 +4,7 @@ import com.erlavush.rtcolony.RTColony;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -18,5 +19,8 @@ public class RTColonyClient {
 
     private void onClientSetup(FMLClientSetupEvent event) {
         RTColony.LOGGER.info("RTColony client setup");
+        if (ModList.get().isLoaded("jade")) {
+            event.enqueueWork(RtsJadeIntegration::register);
+        }
     }
 }

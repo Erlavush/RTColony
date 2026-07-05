@@ -50,3 +50,7 @@ process while Minecraft is open.
 ## License
 
 RTColony is licensed under GPL-3.0-only.
+
+Third-party code/assets copied or adapted from reference mods are tracked in
+`THIRD_PARTY_NOTICES.md`. UI and camera work should follow the reference-first rules in
+`docs/reference-porting-rules.md`.

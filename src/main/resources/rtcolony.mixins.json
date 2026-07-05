@@ -5,6 +5,7 @@
   "client": [
     "CameraMixin",
     "GameRendererAccessor",
+    "KeyboardHandlerMixin",
     "MinecraftMixin",
     "MouseHandlerMixin"
   ],

@@ -45,12 +45,13 @@ public final class RTColonyClientEvents {
 
         RtsCameraState.ensureActive(minecraft.player);
         RtsCameraState.updateTerrainHeight(minecraft.level);
+        RtsEntityPortraitRenderer.tick();
 
         if (minecraft.screen == null) {
             minecraft.mouseHandler.releaseMouse();
-            updateRotationKeys();
             updateEdgePanning(minecraft);
             RtsTargetingState.updateHover(minecraft);
+            RtsBuildDrawer.tick(minecraft);
         }
     }
 
@@ -107,6 +108,7 @@ public final class RTColonyClientEvents {
         guiGraphics.fill(6, 6, textWidth + 14, 22, 0xA0000000);
         guiGraphics.drawString(minecraft.font, RTS_MODE_LABEL, 10, 10, 0xFFFFFF, false);
         RtsSelectionHud.render(minecraft, guiGraphics);
+        RtsBuildDrawer.render(minecraft, guiGraphics);
     }
 
     @SubscribeEvent
@@ -139,17 +141,11 @@ public final class RTColonyClientEvents {
         bufferSource.endBatch(RenderType.lines());
     }
 
-    private static void updateRotationKeys() {
-        if (RTColonyKeyMappings.ROTATE_CAMERA_LEFT.isDown()) {
-            RtsCameraState.rotateLeft();
-        }
-        if (RTColonyKeyMappings.ROTATE_CAMERA_RIGHT.isDown()) {
-            RtsCameraState.rotateRight();
-        }
-    }
-
     private static void updateEdgePanning(Minecraft minecraft) {
-        if (!minecraft.isWindowActive() || minecraft.mouseHandler.isLeftPressed()) {
+        if (!minecraft.isWindowActive()
+                || minecraft.mouseHandler.isLeftPressed()
+                || minecraft.mouseHandler.isMiddlePressed()
+                || RtsBuildDrawer.isMouseOver(minecraft)) {
             return;
         }
 

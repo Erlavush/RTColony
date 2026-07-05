@@ -29,6 +29,7 @@ public final class RtsModeState {
             Minecraft.getInstance().mouseHandler.releaseMouse();
         } else {
             RtsCameraState.deactivate();
+            RtsBuildDrawer.clearPreview();
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.screen == null && minecraft.isWindowActive()) {
                 minecraft.mouseHandler.grabMouse();

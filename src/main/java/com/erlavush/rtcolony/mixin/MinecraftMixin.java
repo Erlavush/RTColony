@@ -21,7 +21,6 @@ public abstract class MinecraftMixin {
             return;
         }
 
-        drain(this.options.keyInventory);
         drain(this.options.keyDrop);
         drain(this.options.keyAttack);
         drain(this.options.keyUse);

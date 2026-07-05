@@ -87,6 +87,12 @@ configurations {
 }
 
 dependencies {
+    compileOnly fileTree(dir: 'run/mods', include: [
+            'Jade-*.jar',
+            'structurize-*.jar',
+            'minecolonies-*.jar',
+            'blockui-*.jar'
+    ])
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

@@ -1,6 +1,7 @@
 package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsCameraState;
+import com.erlavush.rtcolony.client.RtsBuildDrawer;
 import com.erlavush.rtcolony.client.RtsModeState;
 import com.erlavush.rtcolony.client.RtsTargetingState;
 import net.minecraft.client.Minecraft;
@@ -29,6 +30,9 @@ public abstract class MouseHandlerMixin {
     private boolean isLeftPressed;
 
     @Shadow
+    private boolean isMiddlePressed;
+
+    @Shadow
     private boolean ignoreFirstMove;
 
     @Inject(method = "grabMouse", at = @At("HEAD"), cancellable = true)
@@ -39,7 +43,7 @@ public abstract class MouseHandlerMixin {
     }
 
     @Inject(method = "onMove", at = @At("HEAD"))
-    private void rtcolony$panRtsCameraFromLeftDrag(long window, double mouseX, double mouseY, CallbackInfo ci) {
+    private void rtcolony$moveRtsCameraFromMouseDrag(long window, double mouseX, double mouseY, CallbackInfo ci) {
         if (!RtsModeState.isEnabled() || !RtsCameraState.isActive()) {
             return;
         }
@@ -47,12 +51,28 @@ public abstract class MouseHandlerMixin {
         if (window != this.minecraft.getWindow().getWindow()
                 || !this.minecraft.isWindowActive()
                 || this.minecraft.screen != null
-                || this.ignoreFirstMove
-                || !this.isLeftPressed) {
+                || this.ignoreFirstMove) {
             return;
         }
 
-        RtsCameraState.panFromScreenDrag(mouseX - this.xpos, mouseY - this.ypos);
+        if (this.isMiddlePressed) {
+            RtsCameraState.rotateFromScreenDrag(mouseX - this.xpos);
+        } else if (this.isLeftPressed) {
+            RtsCameraState.panFromScreenDrag(mouseX - this.xpos, mouseY - this.ypos);
+        }
+    }
+
+    @Inject(method = "onPress", at = @At("HEAD"), cancellable = true)
+    private void rtcolony$handleRtsDrawerClick(long window, int button, int action, int mods, CallbackInfo ci) {
+        if (!RtsModeState.isEnabled()
+                || window != this.minecraft.getWindow().getWindow()
+                || this.minecraft.screen != null) {
+            return;
+        }
+
+        if (RtsBuildDrawer.handleMousePress(this.minecraft, button, action, this.xpos, this.ypos)) {
+            ci.cancel();
+        }
     }
 
     @Inject(method = "onPress", at = @At("TAIL"))
