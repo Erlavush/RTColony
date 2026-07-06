@@ -9,9 +9,11 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
@@ -19,6 +21,7 @@ import net.neoforged.neoforge.client.event.RenderArmEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 public final class RTColonyClientEvents {
     private static final Component RTS_MODE_LABEL = Component.translatable("rtcolony.hud.rts_mode");
@@ -51,7 +54,9 @@ public final class RTColonyClientEvents {
         }
 
         RtsCameraState.ensureActive(minecraft.player);
-        RtsCameraState.updateTerrainHeight(minecraft.level);
+        if (!RtsBuildDrawer.isPlacementLocked()) {
+            RtsCameraState.updateTerrainHeight(minecraft.level);
+        }
         RtsEntityPortraitRenderer.tick();
 
         if (minecraft.screen == null) {
@@ -119,6 +124,15 @@ public final class RTColonyClientEvents {
     }
 
     @SubscribeEvent
+    public static void onRenderGuiLayer(RenderGuiLayerEvent.Pre event) {
+        if (!RtsModeState.isEnabled() || !isHiddenVanillaHudLayer(event.getName())) {
+            return;
+        }
+
+        event.setCanceled(true);
+    }
+
+    @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (!RtsModeState.isEnabled() || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
             return;
@@ -152,6 +166,7 @@ public final class RTColonyClientEvents {
         if (!minecraft.isWindowActive()
                 || minecraft.mouseHandler.isLeftPressed()
                 || minecraft.mouseHandler.isMiddlePressed()
+                || RtsBuildDrawer.isPlacementLocked()
                 || RtsBuildDrawer.isMouseOver(minecraft)) {
             return;
         }
@@ -175,6 +190,16 @@ public final class RTColonyClientEvents {
         }
 
         RtsCameraState.pan(leftImpulse, forwardImpulse);
+    }
+
+    private static boolean isHiddenVanillaHudLayer(ResourceLocation layerName) {
+        return VanillaGuiLayers.HOTBAR.equals(layerName)
+                || VanillaGuiLayers.CROSSHAIR.equals(layerName)
+                || VanillaGuiLayers.SELECTED_ITEM_NAME.equals(layerName)
+                || VanillaGuiLayers.EXPERIENCE_BAR.equals(layerName)
+                || VanillaGuiLayers.EXPERIENCE_LEVEL.equals(layerName)
+                || VanillaGuiLayers.JUMP_METER.equals(layerName)
+                || VanillaGuiLayers.SPECTATOR_TOOLTIP.equals(layerName);
     }
 
     private static void drawTargetOutline(

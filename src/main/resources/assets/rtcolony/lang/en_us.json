@@ -13,5 +13,15 @@
   "rtcolony.build_drawer.supply_ship": "Supply Ship",
   "rtcolony.build_drawer.preview_hint": "Blueprint preview",
   "rtcolony.build_drawer.preview_inactive": "No preview",
-  "rtcolony.build_drawer.preview_active": "Following cursor"
+  "rtcolony.build_drawer.preview_active": "Following cursor",
+  "rtcolony.build_drawer.preview_locked": "Adjusting placement",
+  "rtcolony.placement.loading": "Loading preview",
+  "rtcolony.placement.valid": "Valid placement",
+  "rtcolony.placement.invalid": "Invalid placement",
+  "rtcolony.placement.invalid_with_count": "Invalid placement (%s)",
+  "rtcolony.placement.missing_item": "Requires %s item",
+  "rtcolony.placement.lock_first": "Right-click to lock preview first",
+  "rtcolony.placement.following_controls": "Right-click lock | R rotate | Q/E height | Esc drawer",
+  "rtcolony.placement.sent": "Placement sent",
+  "rtcolony.placement.failed": "Placement failed"
 }

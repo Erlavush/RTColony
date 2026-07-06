@@ -1,6 +1,7 @@
 package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsCameraState;
+import com.erlavush.rtcolony.client.RtsBuildDrawer;
 import com.erlavush.rtcolony.client.RtsModeState;
 import net.minecraft.client.Camera;
 import net.minecraft.world.entity.Entity;
@@ -32,6 +33,8 @@ public abstract class CameraMixin {
         this.detached = true;
         RtsCameraState.advanceRenderState();
         this.setRotation(RtsCameraState.getYaw(), RtsCameraState.getPitch(), 0.0F);
-        this.setPosition(RtsCameraState.getCameraPosition());
+        this.setPosition(RtsBuildDrawer.isPlacementLocked()
+                ? RtsCameraState.getPlacementCameraPosition(level)
+                : RtsCameraState.getCameraPosition());
     }
 }

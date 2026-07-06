@@ -3,6 +3,7 @@ package com.erlavush.rtcolony.client;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
@@ -13,7 +14,11 @@ public final class RtsCameraState {
     private static final float MIN_DISTANCE = 14.0F;
     private static final float MAX_DISTANCE = 128.0F;
     private static final float DRAG_ROTATE_DEGREES_PER_PIXEL = 0.18F;
+    private static final float DRAG_ORBIT_PITCH_DEGREES_PER_PIXEL = 0.16F;
+    private static final float MIN_ORBIT_PITCH = -65.0F;
+    private static final float MAX_ORBIT_PITCH = 85.0F;
     private static final float ZOOM_STEP = 4.0F;
+    private static final double FLOOR_CLEARANCE = 0.75D;
     private static final double RENDER_SMOOTHING_PER_SECOND = 24.0D;
 
     private static boolean active;
@@ -83,6 +88,41 @@ public final class RtsCameraState {
         return getCenter().subtract(lookDirection.scale(renderDistance));
     }
 
+    public static Vec3 getPlacementCameraPosition(BlockGetter level) {
+        Vec3 center = getCenter();
+        Vec3 lookDirection = Vec3.directionFromRotation(renderPitch, renderYaw).normalize();
+        Vec3 desiredPosition = center.subtract(lookDirection.scale(renderDistance));
+        if (!(level instanceof ClientLevel clientLevel)) {
+            return desiredPosition;
+        }
+
+        Vec3 centerToCamera = desiredPosition.subtract(center);
+        double desiredDistance = centerToCamera.length();
+        if (desiredDistance <= 0.0D) {
+            return desiredPosition;
+        }
+
+        Vec3 orbitDirection = centerToCamera.normalize();
+        double cameraDistance = floorClampedCameraDistance(clientLevel, center, desiredPosition, orbitDirection, desiredDistance);
+        return center.add(orbitDirection.scale(cameraDistance));
+    }
+
+    public static void focusOn(Vec3 center) {
+        if (center == null) {
+            return;
+        }
+
+        targetCenterX = center.x;
+        targetCenterY = center.y;
+        targetCenterZ = center.z;
+    }
+
+    public static void shiftFocus(double deltaX, double deltaY, double deltaZ) {
+        targetCenterX += deltaX;
+        targetCenterY += deltaY;
+        targetCenterZ += deltaZ;
+    }
+
     public static void advanceRenderState() {
         if (!active) {
             return;
@@ -133,6 +173,19 @@ public final class RtsCameraState {
         targetCenterZ += delta.z;
     }
 
+    public static void orbitLockedPlacementFromScreenDrag(double deltaX, double deltaY) {
+        if (!active || deltaX == 0.0D && deltaY == 0.0D) {
+            return;
+        }
+
+        targetYaw = Mth.wrapDegrees((float) (targetYaw + deltaX * DRAG_ROTATE_DEGREES_PER_PIXEL));
+        targetPitch = Mth.clamp(
+                (float) (targetPitch - deltaY * DRAG_ORBIT_PITCH_DEGREES_PER_PIXEL),
+                MIN_ORBIT_PITCH,
+                MAX_ORBIT_PITCH
+        );
+    }
+
     public static void rotateFromScreenDrag(double deltaX) {
         if (!active || deltaX == 0.0D) {
             return;
@@ -145,6 +198,26 @@ public final class RtsCameraState {
         int height = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(targetCenterX), Mth.floor(targetCenterZ));
         double targetY = height + 1.0D;
         targetCenterY = Mth.lerp(0.12D, targetCenterY, targetY);
+    }
+
+    private static double floorClampedCameraDistance(
+            ClientLevel level,
+            Vec3 center,
+            Vec3 desiredPosition,
+            Vec3 orbitDirection,
+            double desiredDistance
+    ) {
+        double floorY = level.getHeight(
+                Heightmap.Types.MOTION_BLOCKING,
+                Mth.floor(desiredPosition.x),
+                Mth.floor(desiredPosition.z)
+        ) + FLOOR_CLEARANCE;
+        if (desiredPosition.y >= floorY || orbitDirection.y >= 0.0D) {
+            return desiredDistance;
+        }
+
+        double floorDistance = (floorY - center.y) / orbitDirection.y;
+        return Mth.clamp(floorDistance, 0.0D, desiredDistance);
     }
 
     private static void resetRenderState() {

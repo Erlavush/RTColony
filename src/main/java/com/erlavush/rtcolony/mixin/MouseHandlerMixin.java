@@ -56,9 +56,15 @@ public abstract class MouseHandlerMixin {
         }
 
         if (this.isMiddlePressed) {
-            RtsCameraState.rotateFromScreenDrag(mouseX - this.xpos);
+            if (RtsBuildDrawer.isPlacementLocked()) {
+                RtsCameraState.orbitLockedPlacementFromScreenDrag(mouseX - this.xpos, mouseY - this.ypos);
+            } else {
+                RtsCameraState.rotateFromScreenDrag(mouseX - this.xpos);
+            }
         } else if (this.isLeftPressed) {
-            RtsCameraState.panFromScreenDrag(mouseX - this.xpos, mouseY - this.ypos);
+            if (!RtsBuildDrawer.isPlacementLocked()) {
+                RtsCameraState.panFromScreenDrag(mouseX - this.xpos, mouseY - this.ypos);
+            }
         }
     }
 
