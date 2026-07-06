@@ -33,7 +33,7 @@ public final class RtsBuildDrawer {
     private static final ResourceLocation ENTRY_BUTTON = structurizeTexture("button_blueprint.png");
     private static final ResourceLocation ENTRY_BUTTON_SELECTED = structurizeTexture("button_blueprint_selected.png");
 
-    private static boolean open = true;
+    private static boolean open;
     private static StarterEntry selectedEntry = StarterEntry.SUPPLY_CAMP;
     private static boolean previewActive;
 
@@ -42,6 +42,10 @@ public final class RtsBuildDrawer {
 
     public static void toggle() {
         open = !open;
+    }
+
+    static void close() {
+        open = false;
     }
 
     static void tick(Minecraft minecraft) {

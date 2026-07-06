@@ -25,6 +25,7 @@ public final class RtsModeState {
         RtsModeState.enabled = enabled;
         RtsTargetingState.clear();
         if (enabled) {
+            RtsBuildDrawer.close();
             RtsCameraState.activateFromPlayer(Minecraft.getInstance().player);
             Minecraft.getInstance().mouseHandler.releaseMouse();
         } else {

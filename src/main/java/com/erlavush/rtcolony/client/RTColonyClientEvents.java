@@ -23,6 +23,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 public final class RTColonyClientEvents {
     private static final Component RTS_MODE_LABEL = Component.translatable("rtcolony.hud.rts_mode");
     private static final int EDGE_PAN_PIXELS = 8;
+    private static boolean enableRtsModeOnNextWorld = true;
 
     private RTColonyClientEvents() {
     }
@@ -30,12 +31,18 @@ public final class RTColonyClientEvents {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         while (RTColonyKeyMappings.TOGGLE_RTS_MODE.consumeClick()) {
+            enableRtsModeOnNextWorld = false;
             RtsModeState.toggle();
         }
 
         Minecraft minecraft = Minecraft.getInstance();
         if (!RtsModeState.isEnabled()) {
-            return;
+            if (enableRtsModeOnNextWorld && minecraft.player != null && minecraft.level != null && minecraft.screen == null) {
+                enableRtsModeOnNextWorld = false;
+                RtsModeState.setEnabled(true);
+            } else {
+                return;
+            }
         }
 
         if (minecraft.player == null || minecraft.level == null) {
