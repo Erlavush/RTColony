@@ -40,6 +40,8 @@ MineColonies and Create integration.
 
 - After each completed requested change, commit and push immediately before starting
   another unrelated change.
+- If the user says a feature is done, accepts it, or moves on to another feature,
+  treat the current completed feature as accepted and commit/push it before continuing.
 - Do not leave completed work only in the working tree unless the user explicitly asks
   not to commit or push.
 - Use this command sequence:
