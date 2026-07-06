@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Client" type="Application" factoryName="Application">
+    <envs>
+      <env name="DRI_PRIME" value="1" />
+      <env name="__NV_PRIME_RENDER_OFFLOAD" value="1" />
+      <env name="__GLX_VENDOR_LIBRARY_NAME" value="nvidia" />
+      <env name="__VK_LAYER_NV_optimus" value="NVIDIA_only" />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="net.neoforged.devlaunch.Main" />
+    <module name="RTColony.main" />
+    <option name="PROGRAM_PARAMETERS" value="@$PROJECT_DIR$/build/moddev/clientRunProgramArgs.txt" />
+    <option name="VM_PARAMETERS" value="@$PROJECT_DIR$/build/moddev/clientRunVmArgs.txt -Dfml.modFolders=rtcolony%%$PROJECT_DIR$/build/classes/java/main:rtcolony%%$PROJECT_DIR$/build/resources/main" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/run" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
