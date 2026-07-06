@@ -36,6 +36,21 @@ MineColonies and Create integration.
 - Use the Prism-derived Java 21 JDK for Gradle and IDE project SDK.
 - Keep third-party reference clones under ignored `references/`.
 
+## Commit and Push Rule
+
+- After each completed requested change, commit and push immediately before starting
+  another unrelated change.
+- Do not leave completed work only in the working tree unless the user explicitly asks
+  not to commit or push.
+- Use this command sequence:
+
+```bash
+git status --short
+git add -A
+git commit -m "chore: update RTColony project files"
+git push
+```
+
 ## Planned Milestones
 
 1. Empty NeoForge 1.21.1 project scaffold.
