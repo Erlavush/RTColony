@@ -3,7 +3,6 @@ package com.erlavush.rtcolony.client;
 import com.erlavush.rtcolony.RTColony;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import com.ldtteam.structurize.storage.StructurePackMeta;
 import com.ldtteam.structurize.storage.StructurePacks;
 import com.ldtteam.structurize.storage.rendering.RenderingCache;
@@ -25,16 +24,12 @@ public final class RtsBuildDrawer {
     private static final int PAPER_SHORT_TEXTURE_HEIGHT = 130;
     private static final int PANEL_WIDTH = 190;
     private static final int PANEL_HEIGHT = 314;
-    private static final int COLLAPSED_VISIBLE_WIDTH = 38;
-    private static final int COLLAPSED_HEIGHT = 150;
     private static final int ENTRY_WIDTH = 86;
     private static final int ENTRY_HEIGHT = 17;
 
     private static final ResourceLocation PAPER = mineColoniesTexture("builder_paper.png");
     private static final ResourceLocation PAPER_SHORT = mineColoniesTexture("builder_paper_short.png");
     private static final ResourceLocation TAB_BUTTON = mineColoniesTexture("builder_button_medium.png");
-    private static final ResourceLocation CLOSE_ARROW = mineColoniesTexture("turn_page_left.png");
-    private static final ResourceLocation OPEN_ARROW = mineColoniesTexture("turn_page_right.png");
     private static final ResourceLocation ENTRY_BUTTON = structurizeTexture("button_blueprint.png");
     private static final ResourceLocation ENTRY_BUTTON_SELECTED = structurizeTexture("button_blueprint_selected.png");
 
@@ -70,7 +65,8 @@ public final class RtsBuildDrawer {
         if (open) {
             return isInside(mouseX, mouseY, panelX(), panelY(minecraft), PANEL_WIDTH, PANEL_HEIGHT);
         }
-        return isInside(mouseX, mouseY, collapsedX(), collapsedY(minecraft), COLLAPSED_VISIBLE_WIDTH, COLLAPSED_HEIGHT);
+        RtsBuildDrawerConfig.Config config = RtsBuildDrawerConfig.get(minecraft);
+        return isInside(mouseX, mouseY, collapsedX(config), collapsedY(minecraft, config), config.collapsedTabWidth, config.collapsedTabHeight);
     }
 
     public static boolean handleMousePress(Minecraft minecraft, int button, int action, double rawMouseX, double rawMouseY) {
@@ -85,7 +81,8 @@ public final class RtsBuildDrawer {
         int mouseY = scaledMouseY(minecraft, rawMouseY);
 
         if (!open) {
-            if (isInside(mouseX, mouseY, collapsedX(), collapsedY(minecraft), COLLAPSED_VISIBLE_WIDTH, COLLAPSED_HEIGHT)) {
+            RtsBuildDrawerConfig.Config config = RtsBuildDrawerConfig.get(minecraft);
+            if (isInside(mouseX, mouseY, collapsedX(config), collapsedY(minecraft, config), config.collapsedTabWidth, config.collapsedTabHeight)) {
                 open = true;
                 return true;
             }
@@ -134,9 +131,10 @@ public final class RtsBuildDrawer {
         int mouseX = scaledMouseX(minecraft);
         int mouseY = scaledMouseY(minecraft);
         Font font = minecraft.font;
+        RtsBuildDrawerConfig.Config config = RtsBuildDrawerConfig.get(minecraft);
 
         drawScaledTexture(guiGraphics, PAPER, x, y, PAPER_TEXTURE_WIDTH, PAPER_TEXTURE_HEIGHT, PANEL_WIDTH, PANEL_HEIGHT);
-        drawTexture(guiGraphics, CLOSE_ARROW, x + 164, y + 14, 18, 10, 18, 10);
+        drawArrowText(guiGraphics, font, config.openArrowText, x + config.openArrowOffsetX, y + config.openArrowOffsetY, config.openArrowScale, config);
 
         guiGraphics.drawString(font, Component.translatable("rtcolony.build_drawer.title"), x + 16, y + 13, 0xFF3C2818, false);
 
@@ -194,19 +192,64 @@ public final class RtsBuildDrawer {
     }
 
     private static void renderCollapsed(Minecraft minecraft, GuiGraphics guiGraphics) {
-        int x = -PANEL_WIDTH + COLLAPSED_VISIBLE_WIDTH;
-        int y = collapsedY(minecraft);
-        drawScaledTexture(guiGraphics, PAPER_SHORT, x, y, PANEL_WIDTH, PAPER_SHORT_TEXTURE_HEIGHT, PANEL_WIDTH, COLLAPSED_HEIGHT);
-        drawVerticalLabel(guiGraphics, minecraft.font, Component.translatable("rtcolony.build_drawer.title"), 23, y + 94);
-        drawTexture(guiGraphics, OPEN_ARROW, 10, y + COLLAPSED_HEIGHT - 25, 18, 10, 18, 10);
+        RtsBuildDrawerConfig.Config config = RtsBuildDrawerConfig.get(minecraft);
+        int x = collapsedX(config);
+        int y = collapsedY(minecraft, config);
+        int height = config.collapsedTabHeight;
+        int width = config.collapsedTabWidth;
+        int center = height / 2;
+        for (int row = 0; row < height; row++) {
+            int distanceFromCenter = Math.abs(row - center);
+            int taper = distanceFromCenter * config.collapsedTabTaper / center;
+            int rowWidth = width - taper;
+            guiGraphics.fill(x, y + row, x + rowWidth, y + row + 1, config.borderColor());
+        }
+        int firstPaperRow = config.collapsedTabPaperInsetTop;
+        int lastPaperRow = height - config.collapsedTabPaperInsetBottom;
+        int paperRows = Math.max(1, lastPaperRow - firstPaperRow);
+        for (int row = firstPaperRow; row < lastPaperRow; row++) {
+            int distanceFromCenter = Math.abs(row - center);
+            int taper = distanceFromCenter * config.collapsedTabTaper / center;
+            int rowWidth = width - taper;
+            int paperWidth = Math.max(0, rowWidth - config.collapsedTabPaperInsetLeft - config.collapsedTabPaperInsetRight);
+            float sourceY = config.collapsedTabPaperSourceY + (float) (row - firstPaperRow) * config.collapsedTabPaperSourceHeight / paperRows;
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            RenderSystem.setShaderTexture(0, PAPER_SHORT);
+            guiGraphics.blit(
+                    PAPER_SHORT,
+                    x + config.collapsedTabPaperOffsetX + config.collapsedTabPaperInsetLeft,
+                    y + config.collapsedTabPaperOffsetY + row,
+                    0,
+                    config.collapsedTabPaperSourceX,
+                    sourceY,
+                    paperWidth,
+                    1,
+                    PAPER_TEXTURE_WIDTH,
+                    PAPER_SHORT_TEXTURE_HEIGHT
+            );
+        }
+        for (int row = 4; row < height / 2; row++) {
+            int distanceFromCenter = Math.abs(row - center);
+            int taper = distanceFromCenter * config.collapsedTabTaper / center;
+            int rowWidth = width - taper;
+            int highlightStartX = x + config.collapsedTabHighlightInsetLeft;
+            int highlightEndX = x + Math.max(config.collapsedTabHighlightInsetLeft, rowWidth - config.collapsedTabHighlightInsetRight);
+            guiGraphics.fill(highlightStartX, y + row, highlightEndX, y + row + 1, config.highlightColor());
+        }
+        int arrowWidth = Math.round(minecraft.font.width(config.collapsedArrowText) * config.collapsedArrowScale);
+        int arrowHeight = Math.round(minecraft.font.lineHeight * config.collapsedArrowScale);
+        int arrowX = x + (width - arrowWidth) / 2 + config.collapsedArrowOffsetX;
+        int arrowY = y + (height - arrowHeight) / 2 + config.collapsedArrowOffsetY;
+        drawArrowText(guiGraphics, minecraft.font, config.collapsedArrowText, arrowX, arrowY, config.collapsedArrowScale, config);
     }
 
-    private static void drawVerticalLabel(GuiGraphics guiGraphics, Font font, Component label, int x, int y) {
+    private static void drawArrowText(GuiGraphics guiGraphics, Font font, String arrow, int x, int y, float scale, RtsBuildDrawerConfig.Config config) {
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         poseStack.translate(x, y, 0.0F);
-        poseStack.mulPose(Axis.ZP.rotationDegrees(-90.0F));
-        guiGraphics.drawString(font, label, 0, 0, 0xFF3C2818, false);
+        poseStack.scale(scale, scale, 1.0F);
+        guiGraphics.drawString(font, arrow, config.arrowShadowOffsetX, config.arrowShadowOffsetY, config.arrowShadowColor(), false);
+        guiGraphics.drawString(font, arrow, 0, 0, config.arrowColor(), false);
         poseStack.popPose();
     }
 
@@ -299,12 +342,12 @@ public final class RtsBuildDrawer {
         return Math.max(26, (minecraft.getWindow().getGuiScaledHeight() - PANEL_HEIGHT) / 2);
     }
 
-    private static int collapsedX() {
-        return 0;
+    private static int collapsedX(RtsBuildDrawerConfig.Config config) {
+        return config.collapsedTabX;
     }
 
-    private static int collapsedY(Minecraft minecraft) {
-        return Math.max(38, (minecraft.getWindow().getGuiScaledHeight() - COLLAPSED_HEIGHT) / 2);
+    private static int collapsedY(Minecraft minecraft, RtsBuildDrawerConfig.Config config) {
+        return Math.max(config.collapsedTabTopMargin, (minecraft.getWindow().getGuiScaledHeight() - config.collapsedTabHeight) / 2);
     }
 
     private static int scaledMouseX(Minecraft minecraft) {
