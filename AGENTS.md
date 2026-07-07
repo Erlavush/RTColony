@@ -103,12 +103,14 @@ MineColonies and Create integration.
 - When committing a feature that changes the mod's current behavior, also update
   `MainFeatures.md` with the short, accurate feature flow. Remove outdated or unnecessary
   details from that file.
+- Commit messages must be short, real, and specific to the completed change. Do not use
+  a generic message when the change has a clear feature, fix, or docs scope.
 - Use this command sequence:
 
 ```bash
 git status --short
 git add -A
-git commit -m "chore: update RTColony project files"
+git commit -m "<type>: <short accurate change summary>"
 git push
 ```
 
