@@ -59,7 +59,7 @@ MineColonies and Create integration.
 - Drawer visual tuning config still exists separately:
   - `run/config/rtcolony-client-ui.json`
   - ignored under `run/`; do not overwrite the user's local tuning unless explicitly asked.
-- `MainFeatured.md` is the concise current feature-flow spec. Keep it short,
+- `MainFeatures.md` is the concise current feature-flow spec. Keep it short,
   accurate, and free of workflow/process notes.
 
 ## Current Workflow Notes
@@ -101,7 +101,7 @@ MineColonies and Create integration.
 - Do not leave completed work only in the working tree unless the user explicitly asks
   not to commit or push.
 - When committing a feature that changes the mod's current behavior, also update
-  `MainFeatured.md` with the short, accurate feature flow. Remove outdated or unnecessary
+  `MainFeatures.md` with the short, accurate feature flow. Remove outdated or unnecessary
   details from that file.
 - Use this command sequence:
 
