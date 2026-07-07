@@ -2,6 +2,7 @@ package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsCameraState;
 import com.erlavush.rtcolony.client.RtsBuildDrawer;
+import com.erlavush.rtcolony.client.RTColonyClientConfig;
 import com.erlavush.rtcolony.client.RtsModeState;
 import com.erlavush.rtcolony.client.RtsTargetingState;
 import net.minecraft.client.Minecraft;
@@ -57,7 +58,13 @@ public abstract class MouseHandlerMixin {
 
         if (this.isMiddlePressed) {
             if (RtsBuildDrawer.isPlacementLocked()) {
-                RtsCameraState.orbitLockedPlacementFromScreenDrag(mouseX - this.xpos, mouseY - this.ypos);
+                RTColonyClientConfig.Config config = RTColonyClientConfig.get(this.minecraft);
+                RtsCameraState.orbitLockedPlacementFromScreenDrag(
+                        mouseX - this.xpos,
+                        mouseY - this.ypos,
+                        config.invertLockedPlacementOrbitHorizontal(),
+                        config.invertLockedPlacementOrbitVertical()
+                );
             } else {
                 RtsCameraState.rotateFromScreenDrag(mouseX - this.xpos);
             }

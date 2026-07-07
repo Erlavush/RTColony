@@ -17,6 +17,58 @@ MineColonies and Create integration.
 - Convenience commands:
   - `/home/eru/.local/bin/java21`
   - `/home/eru/.local/bin/javac21`
+- Current branch: `main`
+- Current verification command: `./gradlew build`
+
+## Current Implemented State
+
+- RTS mode auto-enables on world load and can be toggled with `F4`.
+- `Ctrl+B` opens the RTColony build drawer while RTS mode is active.
+- The build drawer currently supports MineColonies starter supplies:
+  - Supply Camp
+  - Supply Ship
+- Selecting a supply entry starts a Structurize/MineColonies blueprint preview attached
+  to the cursor.
+- While the preview follows the cursor:
+  - right-click locks the preview into placement-confirm mode.
+  - `R` rotates the preview.
+  - `Q/E` or `PageDown/PageUp` adjust height.
+  - `Esc` cancels and returns to the drawer.
+- In locked placement-confirm mode:
+  - the camera target locks to the preview building center.
+  - left-click is consumed/disabled except for clicking RTColony placement UI buttons.
+  - middle-mouse drag orbits around the building center.
+  - scroll zooms.
+  - the placement UI uses Structurize-style buttons for move, height, rotate, mirror,
+    cancel, and confirm.
+  - confirm sends a Structurize `BuildToolPlacementMessage` through MineColonies'
+    `SuppliesHandler`; this is the server-authoritative placement request.
+  - `Esc` exits locked placement back to cursor-following preview.
+  - exiting locked placement or confirming placement calls `RtsCameraState.returnToRtsView()`,
+    so the camera returns to the RTS overhead pitch instead of staying at the low/orbit
+    inspection angle.
+- RTS mode hides vanilla hands, hotbar, crosshair, XP, selected item name, jump meter,
+  and spectator tooltip.
+- A first RTColony config screen exists:
+  - default keybind `O` opens it.
+  - Minecraft Controls can rebind `Open RTColony Config`.
+  - config file: `run/config/rtcolony-client.json` in the dev client.
+  - current options:
+    - invert locked placement horizontal orbit.
+    - invert locked placement vertical orbit.
+- Drawer visual tuning config still exists separately:
+  - `run/config/rtcolony-client-ui.json`
+  - ignored under `run/`; do not overwrite the user's local tuning unless explicitly asked.
+
+## Current Workflow Notes
+
+- Camera/input/mixin changes generally require restarting the Minecraft client. Do not
+  promise IntelliJ hotswap for mixin changes, new methods, or input behavior changes.
+- For simple UI/data-only tweaks, `Ctrl+F9`/Build Project may hotswap only if the JVM
+  reports classes were reloaded. If the game says classes are up to date or behavior does
+  not change, restart the client.
+- The user is testing in IntelliJ with the NeoForge client run config.
+- Before committing user-approved gameplay changes, run `./gradlew build`.
 
 ## Development Rules
 

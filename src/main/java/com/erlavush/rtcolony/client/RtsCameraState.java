@@ -123,6 +123,11 @@ public final class RtsCameraState {
         targetCenterZ += deltaZ;
     }
 
+    public static void returnToRtsView() {
+        targetPitch = DEFAULT_PITCH;
+        renderPitch = DEFAULT_PITCH;
+    }
+
     public static void advanceRenderState() {
         if (!active) {
             return;
@@ -173,14 +178,21 @@ public final class RtsCameraState {
         targetCenterZ += delta.z;
     }
 
-    public static void orbitLockedPlacementFromScreenDrag(double deltaX, double deltaY) {
+    public static void orbitLockedPlacementFromScreenDrag(
+            double deltaX,
+            double deltaY,
+            boolean invertHorizontal,
+            boolean invertVertical
+    ) {
         if (!active || deltaX == 0.0D && deltaY == 0.0D) {
             return;
         }
 
-        targetYaw = Mth.wrapDegrees((float) (targetYaw + deltaX * DRAG_ROTATE_DEGREES_PER_PIXEL));
+        double adjustedDeltaX = invertHorizontal ? -deltaX : deltaX;
+        double adjustedDeltaY = invertVertical ? -deltaY : deltaY;
+        targetYaw = Mth.wrapDegrees((float) (targetYaw + adjustedDeltaX * DRAG_ROTATE_DEGREES_PER_PIXEL));
         targetPitch = Mth.clamp(
-                (float) (targetPitch - deltaY * DRAG_ORBIT_PITCH_DEGREES_PER_PIXEL),
+                (float) (targetPitch - adjustedDeltaY * DRAG_ORBIT_PITCH_DEGREES_PER_PIXEL),
                 MIN_ORBIT_PITCH,
                 MAX_ORBIT_PITCH
         );

@@ -1,6 +1,7 @@
 {
   "key.categories.rtcolony": "RTColony",
   "key.rtcolony.toggle_rts_mode": "Toggle RTS Mode",
+  "key.rtcolony.open_config": "Open RTColony Config",
   "rtcolony.hud.rts_mode": "RTColony: RTS mode ON",
   "rtcolony.hud.selected_entity": "Selected",
   "rtcolony.hud.health": "Health",
@@ -23,5 +24,11 @@
   "rtcolony.placement.lock_first": "Right-click to lock preview first",
   "rtcolony.placement.following_controls": "Right-click lock | R rotate | Q/E height | Esc drawer",
   "rtcolony.placement.sent": "Placement sent",
-  "rtcolony.placement.failed": "Placement failed"
+  "rtcolony.placement.failed": "Placement failed",
+  "rtcolony.config.title": "RTColony Config",
+  "rtcolony.config.section.locked_placement": "Locked placement orbit",
+  "rtcolony.config.locked_orbit_horizontal": "Horizontal orbit: %s",
+  "rtcolony.config.locked_orbit_vertical": "Vertical orbit: %s",
+  "rtcolony.config.value.normal": "Normal",
+  "rtcolony.config.value.inverted": "Inverted"
 }

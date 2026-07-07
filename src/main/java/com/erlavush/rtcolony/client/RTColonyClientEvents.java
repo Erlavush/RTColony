@@ -33,12 +33,18 @@ public final class RTColonyClientEvents {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        while (RTColonyKeyMappings.OPEN_CONFIG.consumeClick()) {
+            if (minecraft.screen == null) {
+                minecraft.setScreen(new RTColonyConfigScreen(null));
+            }
+        }
+
         while (RTColonyKeyMappings.TOGGLE_RTS_MODE.consumeClick()) {
             enableRtsModeOnNextWorld = false;
             RtsModeState.toggle();
         }
 
-        Minecraft minecraft = Minecraft.getInstance();
         if (!RtsModeState.isEnabled()) {
             if (enableRtsModeOnNextWorld && minecraft.player != null && minecraft.level != null && minecraft.screen == null) {
                 enableRtsModeOnNextWorld = false;

@@ -113,6 +113,7 @@ public final class RtsBuildDrawer {
         }
 
         if (placementMode == PlacementMode.LOCKED_ADJUSTING) {
+            RtsCameraState.returnToRtsView();
             placementMode = PlacementMode.FOLLOWING_CURSOR;
             updatePreviewPosition(Minecraft.getInstance());
             invalidatePlacementValidation();
@@ -606,6 +607,7 @@ public final class RtsBuildDrawer {
                     previewData.getRotationMirror()
             ).sendToServer();
 
+            RtsCameraState.returnToRtsView();
             clearPreview();
             if (minecraft.player != null) {
                 minecraft.player.displayClientMessage(Component.translatable("rtcolony.placement.sent"), true);
