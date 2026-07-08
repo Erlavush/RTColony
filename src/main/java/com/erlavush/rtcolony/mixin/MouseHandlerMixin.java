@@ -31,7 +31,7 @@ public abstract class MouseHandlerMixin {
     private boolean isLeftPressed;
 
     @Shadow
-    private boolean isMiddlePressed;
+    private boolean isRightPressed;
 
     @Shadow
     private boolean ignoreFirstMove;
@@ -56,7 +56,7 @@ public abstract class MouseHandlerMixin {
             return;
         }
 
-        if (this.isMiddlePressed) {
+        if (this.isRightPressed) {
             if (RtsBuildDrawer.isPlacementLocked()) {
                 RTColonyClientConfig.Config config = RTColonyClientConfig.get(this.minecraft);
                 RtsCameraState.orbitLockedPlacementFromScreenDrag(

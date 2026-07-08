@@ -174,6 +174,7 @@ public final class RTColonyClientEvents {
                 || !config.edgePanningEnabled()
                 || minecraft.mouseHandler.isLeftPressed()
                 || minecraft.mouseHandler.isMiddlePressed()
+                || minecraft.mouseHandler.isRightPressed()
                 || RtsBuildDrawer.isPlacementLocked()
                 || RtsBuildDrawer.isMouseOver(minecraft)) {
             return;

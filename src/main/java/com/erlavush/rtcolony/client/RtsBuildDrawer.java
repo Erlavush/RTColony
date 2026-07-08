@@ -118,10 +118,6 @@ public final class RtsBuildDrawer {
 
         if (placementMode == PlacementMode.LOCKED_ADJUSTING) {
             RtsCameraState.returnToRtsView();
-            placementMode = PlacementMode.FOLLOWING_CURSOR;
-            updatePreviewPosition(Minecraft.getInstance());
-            invalidatePlacementValidation();
-            return true;
         }
 
         clearPreview();
@@ -196,6 +192,22 @@ public final class RtsBuildDrawer {
         }
         invalidatePlacementValidation();
         return true;
+    }
+
+    public static boolean moveLockedPreviewRelativeToCamera(int leftImpulse, int forwardImpulse) {
+        if (placementMode != PlacementMode.LOCKED_ADJUSTING || leftImpulse == 0 && forwardImpulse == 0) {
+            return false;
+        }
+
+        Vec3 forward = Vec3.directionFromRotation(0.0F, RtsCameraState.getTargetYaw()).multiply(1.0D, 0.0D, 1.0D).normalize();
+        Vec3 left = new Vec3(forward.z, 0.0D, -forward.x);
+        Vec3 movement = forward.scale(forwardImpulse).add(left.scale(leftImpulse));
+        int deltaX = blockStep(movement.x);
+        int deltaZ = blockStep(movement.z);
+        if (deltaX == 0 && deltaZ == 0) {
+            return true;
+        }
+        return movePreview(deltaX, 0, deltaZ);
     }
 
     static boolean isMouseOver(Minecraft minecraft) {
@@ -550,6 +562,13 @@ public final class RtsBuildDrawer {
         RtsCameraState.shiftFocus(deltaX, deltaY, deltaZ);
         invalidatePlacementValidation();
         return true;
+    }
+
+    private static int blockStep(double value) {
+        if (Math.abs(value) < 0.5D) {
+            return 0;
+        }
+        return value > 0.0D ? 1 : -1;
     }
 
     private static void focusCameraOnPreview() {

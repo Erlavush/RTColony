@@ -71,6 +71,10 @@ public final class RtsCameraState {
         return renderYaw;
     }
 
+    public static float getTargetYaw() {
+        return targetYaw;
+    }
+
     public static float getPitch() {
         return renderPitch;
     }

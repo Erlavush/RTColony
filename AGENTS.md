@@ -37,14 +37,18 @@ MineColonies and Create integration.
 - In locked placement-confirm mode:
   - the camera target locks to the preview building center.
   - left-click is consumed/disabled except for clicking RTColony placement UI buttons.
-  - middle-mouse drag orbits around the building center.
+  - right-click drag orbits around the building center.
   - scroll zooms.
+  - `W/A/S/D` move the preview relative to the current camera direction.
+  - `Q/R` rotate left/right.
+  - `F` mirrors.
+  - `Enter` confirms placement.
   - the placement UI is a compact right-side Structurize-style tool rail for move,
     height, rotate, mirror, cancel, and confirm.
   - confirm sends a Structurize `BuildToolPlacementMessage` through MineColonies'
     `SuppliesHandler`; this is the server-authoritative placement request.
-  - `Esc` exits locked placement back to cursor-following preview.
-  - exiting locked placement or confirming placement calls `RtsCameraState.returnToRtsView()`,
+  - `Esc` cancels placement and returns to the open build drawer.
+  - canceling or confirming placement calls `RtsCameraState.returnToRtsView()`,
     so the camera returns to the RTS overhead pitch instead of staying at the low/orbit
     inspection angle.
 - RTS mode hides vanilla hands, hotbar, crosshair, XP, selected item name, jump meter,
@@ -55,7 +59,7 @@ MineColonies and Create integration.
   - config file: `run/config/rtcolony-client.json` in the dev client.
   - current options:
     - edge panning enabled.
-    - edge panning speed.
+    - edge panning speed slider.
     - invert locked placement horizontal orbit.
     - invert locked placement vertical orbit.
 - Drawer visual tuning config still exists separately:

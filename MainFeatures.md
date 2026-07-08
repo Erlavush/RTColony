@@ -17,9 +17,9 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - Normal RTS mode uses an overhead terrain-following camera.
 - Mouse wheel zooms.
 - Edge panning moves the camera when enabled.
-- Edge panning speed is configurable.
+- Edge panning speed is configurable with a slider.
 - Left mouse drag pans.
-- Middle mouse drag rotates.
+- Right mouse drag rotates.
 
 ## Build Drawer
 
@@ -40,11 +40,15 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - The preview stops following the cursor.
 - The camera locks to the preview building center.
 - Left click is consumed except for RTColony placement UI buttons.
-- Middle mouse drag orbits around the building center.
+- Right mouse drag orbits around the building center.
 - Vertical orbit is floor-clamped.
 - Scroll zooms around the building.
-- `Esc` exits back to cursor preview.
-- Exiting locked placement returns the camera to the RTS overhead pitch.
+- `W/A/S/D` move the preview relative to the current camera direction.
+- `Q/R` rotate left/right.
+- `F` mirrors.
+- `Enter` confirms placement.
+- `Esc` cancels and returns to the open build drawer.
+- Canceling or confirming placement returns the camera to the RTS overhead pitch.
 
 ## Placement UI
 

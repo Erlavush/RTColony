@@ -2,15 +2,16 @@ package com.erlavush.rtcolony.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 
 public final class RTColonyConfigScreen extends Screen {
     private static final float EDGE_PAN_SENSITIVITY_MIN = 0.25F;
     private static final float EDGE_PAN_SENSITIVITY_MAX = 3.0F;
-    private static final float EDGE_PAN_SENSITIVITY_STEP = 0.25F;
 
     private final Screen parent;
 
@@ -35,18 +36,7 @@ public final class RTColonyConfigScreen extends Screen {
                 .bounds(centerX - buttonWidth / 2, y, buttonWidth, buttonHeight)
                 .build());
 
-        this.addRenderableWidget(Button.builder(edgePanningSpeedLabel(), button -> {
-                    Minecraft minecraft = Minecraft.getInstance();
-                    float current = RTColonyClientConfig.get(minecraft).edgePanningSensitivity();
-                    float next = current + EDGE_PAN_SENSITIVITY_STEP;
-                    if (next > EDGE_PAN_SENSITIVITY_MAX + 0.001F) {
-                        next = EDGE_PAN_SENSITIVITY_MIN;
-                    }
-                    RTColonyClientConfig.setEdgePanningSensitivity(minecraft, next);
-                    button.setMessage(edgePanningSpeedLabel());
-                })
-                .bounds(centerX - buttonWidth / 2, y + 24, buttonWidth, buttonHeight)
-                .build());
+        this.addRenderableWidget(new EdgePanningSensitivitySlider(centerX - buttonWidth / 2, y + 24, buttonWidth, buttonHeight));
 
         this.addRenderableWidget(Button.builder(horizontalOrbitLabel(), button -> {
                     Minecraft minecraft = Minecraft.getInstance();
@@ -129,5 +119,37 @@ public final class RTColonyConfigScreen extends Screen {
                 "rtcolony.config.edge_panning_speed",
                 Component.literal(Math.round(RTColonyClientConfig.get(Minecraft.getInstance()).edgePanningSensitivity() * 100.0F) + "%")
         );
+    }
+
+    private static double sliderValue(float sensitivity) {
+        float clamped = Mth.clamp(sensitivity, EDGE_PAN_SENSITIVITY_MIN, EDGE_PAN_SENSITIVITY_MAX);
+        return (clamped - EDGE_PAN_SENSITIVITY_MIN) / (EDGE_PAN_SENSITIVITY_MAX - EDGE_PAN_SENSITIVITY_MIN);
+    }
+
+    private static float sensitivityValue(double sliderValue) {
+        return (float) (EDGE_PAN_SENSITIVITY_MIN + sliderValue * (EDGE_PAN_SENSITIVITY_MAX - EDGE_PAN_SENSITIVITY_MIN));
+    }
+
+    private static final class EdgePanningSensitivitySlider extends AbstractSliderButton {
+        private EdgePanningSensitivitySlider(int x, int y, int width, int height) {
+            super(
+                    x,
+                    y,
+                    width,
+                    height,
+                    edgePanningSpeedLabel(),
+                    sliderValue(RTColonyClientConfig.get(Minecraft.getInstance()).edgePanningSensitivity())
+            );
+        }
+
+        @Override
+        protected void updateMessage() {
+            this.setMessage(edgePanningSpeedLabel());
+        }
+
+        @Override
+        protected void applyValue() {
+            RTColonyClientConfig.setEdgePanningSensitivity(Minecraft.getInstance(), sensitivityValue(this.value));
+        }
     }
 }
