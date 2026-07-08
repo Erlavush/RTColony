@@ -123,24 +123,26 @@ MineColonies and Create integration.
 
 ## Commit and Push Rule
 
-- After each completed requested change, commit and push immediately before starting
-  another unrelated change.
-- If the user says a feature is done, accepts it, or moves on to another feature,
-  treat the current completed feature as accepted and commit/push it before continuing.
+- Commit and push at stable checkpoints instead of after every small tweak.
+- Batch small follow-up tweaks that belong to the same feature thread into one commit
+  unless the user explicitly asks for an immediate commit/push.
+- Commit and push when the user explicitly asks, when a stable milestone is complete,
+  when the user accepts a feature, or before starting unrelated work.
 - Do not commit or push when the user explicitly says to skip, pause, avoid, or not do
   the commit/push.
-- Do not leave completed work only in the working tree unless the user explicitly asks
-  not to commit or push.
+- Do not leave stable accepted work only in the working tree unless the user explicitly
+  asks not to commit or push.
 - When committing a feature that changes the mod's current behavior, also update
   `MainFeatures.md` with the short, accurate feature flow. Remove outdated or unnecessary
   details from that file.
 - Commit messages must be short, real, and specific to the completed change. Do not use
   a generic message when the change has a clear feature, fix, or docs scope.
-- Use this command sequence:
+- When committing, use this command sequence and stage only the intended files if
+  unrelated local files are present:
 
 ```bash
 git status --short
-git add -A
+git add <intended files>
 git commit -m "<type>: <short accurate change summary>"
 git push
 ```
