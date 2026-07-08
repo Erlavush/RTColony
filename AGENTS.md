@@ -77,18 +77,24 @@ MineColonies and Create integration.
 ## Agent Alignment Rule
 
 - Do not add, expand, or redesign features beyond what the user explicitly requested.
-- When a feature request is ambiguous, ask 1-3 short alignment questions before
-  implementing. Prefer questions that expose real design choices, expected controls,
-  target reference behavior, and acceptance criteria.
-- If a multiple-choice user-input tool is available, use it for concise options; include
-  the best recommended option first. If that tool is unavailable, ask concise plain-text
+- For every requested new feature or feature redesign, do not implement immediately.
+  First run a short alignment pass inspired by Superpowers-style brainstorming:
+  understand current project context, ask focused questions, then present a concise
+  design/spec for approval before changing code.
+- Ask questions even when the request seems clear. Keep them lightweight: usually 1-3
+  high-signal questions, one at a time when possible, focused on user intent, controls,
+  UX/reference behavior, constraints, and acceptance criteria.
+- If a multiple-choice user-input tool is available, use it for concise options and put
+  the recommended option first. If that tool is unavailable, ask concise plain-text
   questions.
-- If the user explicitly says to choose for them, "just do it", or that they are tired of
-  deciding, proceed with a conservative implementation that follows existing project
-  patterns and document the assumptions in the final response.
-- For brainstorming requests, do not implement immediately. Present the most important
-  options, ask the few questions needed to narrow them, and wait for confirmation before
-  changing code.
+- Do not proceed from questions/spec to implementation until the user confirms the
+  direction, unless the user explicitly says to choose for them, "just do it", or that
+  they are tired of deciding.
+- If the user delegates the decision, proceed with a conservative implementation that
+  follows existing project patterns and document the assumptions in the final response.
+- For brainstorming requests, never implement in the same step. Present the most
+  important options, ask the few questions needed to narrow them, and wait for
+  confirmation before changing code.
 - Keep durable agent-learning notes short and project-specific. Use `AGENTS.md` for
   workflow rules, `MainFeatures.md` for current player-facing feature flow, and avoid
   turning either file into a long process journal.
