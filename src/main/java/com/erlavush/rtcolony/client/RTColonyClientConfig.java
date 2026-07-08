@@ -45,6 +45,18 @@ public final class RTColonyClientConfig {
         save(minecraft);
     }
 
+    public static void setEdgePanningEnabled(Minecraft minecraft, boolean value) {
+        Config config = get(minecraft);
+        config.edgePanningEnabled = value;
+        save(minecraft);
+    }
+
+    public static void setEdgePanningSensitivity(Minecraft minecraft, float value) {
+        Config config = get(minecraft);
+        config.edgePanningSensitivity = value;
+        save(minecraft);
+    }
+
     private static void refresh(Minecraft minecraft) {
         Path path = path(minecraft);
         try {
@@ -100,8 +112,17 @@ public final class RTColonyClientConfig {
     public static final class Config {
         private boolean invertLockedPlacementOrbitHorizontal;
         private boolean invertLockedPlacementOrbitVertical;
+        private Boolean edgePanningEnabled = true;
+        private Float edgePanningSensitivity = 1.0F;
 
         private Config normalized() {
+            if (this.edgePanningEnabled == null) {
+                this.edgePanningEnabled = true;
+            }
+            if (this.edgePanningSensitivity == null || this.edgePanningSensitivity <= 0.0F) {
+                this.edgePanningSensitivity = 1.0F;
+            }
+            this.edgePanningSensitivity = Math.max(0.25F, Math.min(3.0F, this.edgePanningSensitivity));
             return this;
         }
 
@@ -111,6 +132,14 @@ public final class RTColonyClientConfig {
 
         public boolean invertLockedPlacementOrbitVertical() {
             return this.invertLockedPlacementOrbitVertical;
+        }
+
+        public boolean edgePanningEnabled() {
+            return Boolean.TRUE.equals(this.edgePanningEnabled);
+        }
+
+        public float edgePanningSensitivity() {
+            return this.edgePanningSensitivity == null ? 1.0F : this.edgePanningSensitivity;
         }
     }
 }

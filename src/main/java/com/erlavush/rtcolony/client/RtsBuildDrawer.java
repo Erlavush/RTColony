@@ -41,9 +41,13 @@ public final class RtsBuildDrawer {
     private static final int PANEL_HEIGHT = 314;
     private static final int ENTRY_WIDTH = 86;
     private static final int ENTRY_HEIGHT = 17;
-    private static final int PLACEMENT_HUD_WIDTH = 252;
-    private static final int PLACEMENT_HUD_HEIGHT = 110;
-    private static final int PLACEMENT_BUTTON_SIZE = 32;
+    private static final int PLACEMENT_FOLLOWING_PANEL_WIDTH = 228;
+    private static final int PLACEMENT_FOLLOWING_PANEL_HEIGHT = 46;
+    private static final int PLACEMENT_LOCKED_PANEL_WIDTH = 126;
+    private static final int PLACEMENT_LOCKED_PANEL_HEIGHT = 176;
+    private static final int PLACEMENT_BUTTON_SIZE = 24;
+    private static final int PLACEMENT_BUTTON_ICON_SIZE = 20;
+    private static final int PLACEMENT_BUTTON_ICON_SOURCE_SIZE = 32;
     private static final int PLACEMENT_BUTTON_GAP = 4;
     private static final long PLACEMENT_VALIDATION_INTERVAL_MS = 250L;
 
@@ -449,6 +453,25 @@ public final class RtsBuildDrawer {
         poseStack.popPose();
     }
 
+    private static void drawScaledIcon(GuiGraphics guiGraphics, ResourceLocation texture, int x, int y, int size) {
+        PoseStack poseStack = guiGraphics.pose();
+        poseStack.pushPose();
+        poseStack.translate(x, y, 0.0F);
+        float scale = (float) size / PLACEMENT_BUTTON_ICON_SOURCE_SIZE;
+        poseStack.scale(scale, scale, 1.0F);
+        drawTexture(
+                guiGraphics,
+                texture,
+                0,
+                0,
+                PLACEMENT_BUTTON_ICON_SOURCE_SIZE,
+                PLACEMENT_BUTTON_ICON_SOURCE_SIZE,
+                PLACEMENT_BUTTON_ICON_SOURCE_SIZE,
+                PLACEMENT_BUTTON_ICON_SOURCE_SIZE
+        );
+        poseStack.popPose();
+    }
+
     private static void selectEntry(Minecraft minecraft, StarterEntry entry) {
         selectedEntry = entry;
         open = false;
@@ -738,42 +761,60 @@ public final class RtsBuildDrawer {
         Font font = minecraft.font;
         int x = placementPanelX(minecraft);
         int y = placementPanelY(minecraft);
+        int width = placementPanelWidth();
+        int height = placementPanelHeight();
 
-        drawScaledTexture(guiGraphics, PAPER_SHORT, x, y, PAPER_TEXTURE_WIDTH, PAPER_SHORT_TEXTURE_HEIGHT, PLACEMENT_HUD_WIDTH, PLACEMENT_HUD_HEIGHT);
+        renderPlacementPanel(guiGraphics, x, y, width, height);
 
-        String title = trim(font, selectedEntry.label().getString(), PLACEMENT_HUD_WIDTH - 82);
-        String rotation = "Rot " + rotationDegrees() + "  Y " + signed(previewYOffset);
-        guiGraphics.drawString(font, title, x + 10, y + 8, 0xFF3C2818, false);
-        guiGraphics.drawString(font, rotation, x + PLACEMENT_HUD_WIDTH - 10 - font.width(rotation), y + 8, 0xFF5A3A1F, false);
-
-        String status = placementStatusText();
-        guiGraphics.drawString(font, trim(font, status, PLACEMENT_HUD_WIDTH - 20), x + 10, y + 21, placementStatusColor(), false);
+        String title = trim(font, selectedEntry.label().getString(), width - 16);
+        String status = trim(font, placementStatusText(), width - 16);
+        guiGraphics.drawString(font, title, x + 8, y + 7, 0xFFFFF2D0, false);
+        guiGraphics.drawString(font, status, x + 8, y + 19, placementStatusColor(), false);
 
         if (placementMode != PlacementMode.LOCKED_ADJUSTING) {
             String controls = Component.translatable("rtcolony.placement.following_controls").getString();
-            guiGraphics.drawString(font, trim(font, controls, PLACEMENT_HUD_WIDTH - 20), x + 10, y + 35, 0xFF7F6041, false);
+            guiGraphics.drawString(font, trim(font, controls, width - 16), x + 8, y + 31, 0xFFC9AA7F, false);
             return;
         }
 
+        String rotation = "Rot " + rotationDegrees() + "  Y " + signed(previewYOffset);
+        guiGraphics.drawString(font, rotation, x + 8, y + 31, 0xFFC9AA7F, false);
+
         int mouseX = scaledMouseX(minecraft);
         int mouseY = scaledMouseY(minecraft);
-        int firstRowY = y + 35;
-        int secondRowY = y + 72;
-        int firstRowX = x + 10;
-        int secondRowX = x + 28;
 
-        renderToolButton(guiGraphics, LEFT_ICON, firstRowX, firstRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, UP_ICON, firstRowX + buttonStep(), firstRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, DOWN_ICON, firstRowX + buttonStep() * 2, firstRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, RIGHT_ICON, firstRowX + buttonStep() * 3, firstRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, PLUS_ICON, firstRowX + buttonStep() * 4, firstRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, MINUS_ICON, firstRowX + buttonStep() * 5, firstRowY, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, ROTATE_LEFT_ICON, 0, 0, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, UP_ICON, 1, 0, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, ROTATE_RIGHT_ICON, 2, 0, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, LEFT_ICON, 0, 1, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, DOWN_ICON, 1, 1, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, RIGHT_ICON, 2, 1, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, MINUS_ICON, 0, 2, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, MIRROR_ICON, 1, 2, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, PLUS_ICON, 2, 2, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, CANCEL_ICON, 0, 3, mouseX, mouseY, true);
+        renderToolButtonAt(minecraft, guiGraphics, CONFIRM_ICON, 2, 3, mouseX, mouseY, placementState == PlacementState.VALID);
+    }
 
-        renderToolButton(guiGraphics, ROTATE_LEFT_ICON, secondRowX, secondRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, ROTATE_RIGHT_ICON, secondRowX + buttonStep(), secondRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, MIRROR_ICON, secondRowX + buttonStep() * 2, secondRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, CANCEL_ICON, secondRowX + buttonStep() * 3, secondRowY, mouseX, mouseY, true);
-        renderToolButton(guiGraphics, CONFIRM_ICON, secondRowX + buttonStep() * 4, secondRowY, mouseX, mouseY, placementState == PlacementState.VALID);
+    private static void renderPlacementPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        guiGraphics.fill(x, y, x + width, y + height, 0xB0181410);
+        guiGraphics.fill(x, y, x + width, y + 1, 0xAAFFF2C8);
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, 0xAA3C2818);
+        guiGraphics.fill(x, y, x + 1, y + height, 0xAAFFF2C8);
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, 0xAA3C2818);
+    }
+
+    private static void renderToolButtonAt(
+            Minecraft minecraft,
+            GuiGraphics guiGraphics,
+            ResourceLocation icon,
+            int column,
+            int row,
+            int mouseX,
+            int mouseY,
+            boolean enabled
+    ) {
+        renderToolButton(guiGraphics, icon, toolButtonX(minecraft, column), toolButtonY(minecraft, row), mouseX, mouseY, enabled);
     }
 
     private static void renderToolButton(
@@ -786,54 +827,53 @@ public final class RtsBuildDrawer {
             boolean enabled
     ) {
         boolean hovered = enabled && isInside(mouseX, mouseY, x, y, PLACEMENT_BUTTON_SIZE, PLACEMENT_BUTTON_SIZE);
-        guiGraphics.fill(x - 1, y - 1, x + PLACEMENT_BUTTON_SIZE + 1, y + PLACEMENT_BUTTON_SIZE + 1, hovered ? 0x66FFF2C8 : 0x333C2818);
-        guiGraphics.fill(x, y, x + PLACEMENT_BUTTON_SIZE, y + PLACEMENT_BUTTON_SIZE, enabled ? 0x22FFFFFF : 0x553C2818);
-        drawTexture(guiGraphics, icon, x, y, PLACEMENT_BUTTON_SIZE, PLACEMENT_BUTTON_SIZE, PLACEMENT_BUTTON_SIZE, PLACEMENT_BUTTON_SIZE);
+        guiGraphics.fill(x - 1, y - 1, x + PLACEMENT_BUTTON_SIZE + 1, y + PLACEMENT_BUTTON_SIZE + 1, hovered ? 0x99FFF2C8 : 0x66442E1D);
+        guiGraphics.fill(x, y, x + PLACEMENT_BUTTON_SIZE, y + PLACEMENT_BUTTON_SIZE, enabled ? 0x333C2818 : 0x773C2818);
+        drawScaledIcon(
+                guiGraphics,
+                icon,
+                x + (PLACEMENT_BUTTON_SIZE - PLACEMENT_BUTTON_ICON_SIZE) / 2,
+                y + (PLACEMENT_BUTTON_SIZE - PLACEMENT_BUTTON_ICON_SIZE) / 2,
+                PLACEMENT_BUTTON_ICON_SIZE
+        );
     }
 
     private static boolean handlePlacementPanelClick(Minecraft minecraft, int mouseX, int mouseY) {
-        int x = placementPanelX(minecraft);
-        int y = placementPanelY(minecraft);
-        if (!isInside(mouseX, mouseY, x, y, PLACEMENT_HUD_WIDTH, PLACEMENT_HUD_HEIGHT)) {
+        if (!isInsidePlacementPanel(minecraft, mouseX, mouseY)) {
             return false;
         }
 
-        int firstRowY = y + 35;
-        int secondRowY = y + 72;
-        int firstRowX = x + 10;
-        int secondRowX = x + 28;
-
-        if (isInsideToolButton(mouseX, mouseY, firstRowX, firstRowY)) {
-            return movePreview(-1, 0, 0);
-        }
-        if (isInsideToolButton(mouseX, mouseY, firstRowX + buttonStep(), firstRowY)) {
-            return movePreview(0, 0, -1);
-        }
-        if (isInsideToolButton(mouseX, mouseY, firstRowX + buttonStep() * 2, firstRowY)) {
-            return movePreview(0, 0, 1);
-        }
-        if (isInsideToolButton(mouseX, mouseY, firstRowX + buttonStep() * 3, firstRowY)) {
-            return movePreview(1, 0, 0);
-        }
-        if (isInsideToolButton(mouseX, mouseY, firstRowX + buttonStep() * 4, firstRowY)) {
-            return adjustPreviewHeight(minecraft, 1);
-        }
-        if (isInsideToolButton(mouseX, mouseY, firstRowX + buttonStep() * 5, firstRowY)) {
-            return adjustPreviewHeight(minecraft, -1);
-        }
-        if (isInsideToolButton(mouseX, mouseY, secondRowX, secondRowY)) {
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 0, 0)) {
             return rotatePreviewLeft();
         }
-        if (isInsideToolButton(mouseX, mouseY, secondRowX + buttonStep(), secondRowY)) {
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 1, 0)) {
+            return movePreview(0, 0, -1);
+        }
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 2, 0)) {
             return rotatePreview();
         }
-        if (isInsideToolButton(mouseX, mouseY, secondRowX + buttonStep() * 2, secondRowY)) {
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 0, 1)) {
+            return movePreview(-1, 0, 0);
+        }
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 1, 1)) {
+            return movePreview(0, 0, 1);
+        }
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 2, 1)) {
+            return movePreview(1, 0, 0);
+        }
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 0, 2)) {
+            return adjustPreviewHeight(minecraft, -1);
+        }
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 1, 2)) {
             return mirrorPreview();
         }
-        if (isInsideToolButton(mouseX, mouseY, secondRowX + buttonStep() * 3, secondRowY)) {
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 2, 2)) {
+            return adjustPreviewHeight(minecraft, 1);
+        }
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 0, 3)) {
             return cancelPreview();
         }
-        if (isInsideToolButton(mouseX, mouseY, secondRowX + buttonStep() * 4, secondRowY)) {
+        if (isInsideToolButtonAt(minecraft, mouseX, mouseY, 2, 3)) {
             return confirmPlacement(minecraft);
         }
 
@@ -841,23 +881,44 @@ public final class RtsBuildDrawer {
     }
 
     private static boolean isInsidePlacementPanel(Minecraft minecraft, int mouseX, int mouseY) {
-        return isInside(mouseX, mouseY, placementPanelX(minecraft), placementPanelY(minecraft), PLACEMENT_HUD_WIDTH, PLACEMENT_HUD_HEIGHT);
+        return isInside(mouseX, mouseY, placementPanelX(minecraft), placementPanelY(minecraft), placementPanelWidth(), placementPanelHeight());
     }
 
-    private static boolean isInsideToolButton(int mouseX, int mouseY, int x, int y) {
-        return isInside(mouseX, mouseY, x, y, PLACEMENT_BUTTON_SIZE, PLACEMENT_BUTTON_SIZE);
+    private static boolean isInsideToolButtonAt(Minecraft minecraft, int mouseX, int mouseY, int column, int row) {
+        return isInside(mouseX, mouseY, toolButtonX(minecraft, column), toolButtonY(minecraft, row), PLACEMENT_BUTTON_SIZE, PLACEMENT_BUTTON_SIZE);
     }
 
     private static int buttonStep() {
         return PLACEMENT_BUTTON_SIZE + PLACEMENT_BUTTON_GAP;
     }
 
+    private static int placementPanelWidth() {
+        return placementMode == PlacementMode.LOCKED_ADJUSTING ? PLACEMENT_LOCKED_PANEL_WIDTH : PLACEMENT_FOLLOWING_PANEL_WIDTH;
+    }
+
+    private static int placementPanelHeight() {
+        return placementMode == PlacementMode.LOCKED_ADJUSTING ? PLACEMENT_LOCKED_PANEL_HEIGHT : PLACEMENT_FOLLOWING_PANEL_HEIGHT;
+    }
+
     private static int placementPanelX(Minecraft minecraft) {
-        return (minecraft.getWindow().getGuiScaledWidth() - PLACEMENT_HUD_WIDTH) / 2;
+        return Math.max(8, minecraft.getWindow().getGuiScaledWidth() - placementPanelWidth() - 10);
     }
 
     private static int placementPanelY(Minecraft minecraft) {
-        return minecraft.getWindow().getGuiScaledHeight() - PLACEMENT_HUD_HEIGHT - 10;
+        int screenHeight = minecraft.getWindow().getGuiScaledHeight();
+        int panelHeight = placementPanelHeight();
+        int centered = (screenHeight - panelHeight) / 2;
+        int maxY = Math.max(8, screenHeight - panelHeight - 8);
+        return Math.max(8, Math.min(centered, maxY));
+    }
+
+    private static int toolButtonX(Minecraft minecraft, int column) {
+        int gridWidth = PLACEMENT_BUTTON_SIZE * 3 + PLACEMENT_BUTTON_GAP * 2;
+        return placementPanelX(minecraft) + (PLACEMENT_LOCKED_PANEL_WIDTH - gridWidth) / 2 + column * buttonStep();
+    }
+
+    private static int toolButtonY(Minecraft minecraft, int row) {
+        return placementPanelY(minecraft) + 58 + row * buttonStep();
     }
 
     private static String placementStatusText() {

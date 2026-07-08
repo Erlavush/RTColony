@@ -16,7 +16,8 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 - Normal RTS mode uses an overhead terrain-following camera.
 - Mouse wheel zooms.
-- Edge panning moves the camera.
+- Edge panning moves the camera when enabled.
+- Edge panning speed is configurable.
 - Left mouse drag pans.
 - Middle mouse drag rotates.
 
@@ -47,7 +48,7 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 ## Placement UI
 
-- Locked placement shows a Structurize-style control panel.
+- Locked placement shows a compact right-side Structurize-style tool rail.
 - Controls: move X/Z, height, rotate left/right, mirror, cancel, confirm.
 - Confirm is the only final placement action.
 - Confirm sends `BuildToolPlacementMessage` through MineColonies `SuppliesHandler`.
@@ -59,6 +60,8 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - The keybind is rebindable in Minecraft Controls.
 - Config file: `config/rtcolony-client.json`.
 - Current options:
+  - edge panning enabled
+  - edge panning speed
   - invert locked placement horizontal orbit
   - invert locked placement vertical orbit
 

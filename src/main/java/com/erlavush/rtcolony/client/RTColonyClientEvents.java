@@ -169,7 +169,9 @@ public final class RTColonyClientEvents {
     }
 
     private static void updateEdgePanning(Minecraft minecraft) {
+        RTColonyClientConfig.Config config = RTColonyClientConfig.get(minecraft);
         if (!minecraft.isWindowActive()
+                || !config.edgePanningEnabled()
                 || minecraft.mouseHandler.isLeftPressed()
                 || minecraft.mouseHandler.isMiddlePressed()
                 || RtsBuildDrawer.isPlacementLocked()
@@ -195,7 +197,7 @@ public final class RTColonyClientEvents {
             forwardImpulse -= 1.0F;
         }
 
-        RtsCameraState.pan(leftImpulse, forwardImpulse);
+        RtsCameraState.pan(leftImpulse, forwardImpulse, config.edgePanningSensitivity());
     }
 
     private static boolean isHiddenVanillaHudLayer(ResourceLocation layerName) {

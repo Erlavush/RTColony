@@ -39,8 +39,8 @@ MineColonies and Create integration.
   - left-click is consumed/disabled except for clicking RTColony placement UI buttons.
   - middle-mouse drag orbits around the building center.
   - scroll zooms.
-  - the placement UI uses Structurize-style buttons for move, height, rotate, mirror,
-    cancel, and confirm.
+  - the placement UI is a compact right-side Structurize-style tool rail for move,
+    height, rotate, mirror, cancel, and confirm.
   - confirm sends a Structurize `BuildToolPlacementMessage` through MineColonies'
     `SuppliesHandler`; this is the server-authoritative placement request.
   - `Esc` exits locked placement back to cursor-following preview.
@@ -54,6 +54,8 @@ MineColonies and Create integration.
   - Minecraft Controls can rebind `Open RTColony Config`.
   - config file: `run/config/rtcolony-client.json` in the dev client.
   - current options:
+    - edge panning enabled.
+    - edge panning speed.
     - invert locked placement horizontal orbit.
     - invert locked placement vertical orbit.
 - Drawer visual tuning config still exists separately:
@@ -71,6 +73,25 @@ MineColonies and Create integration.
   not change, restart the client.
 - The user is testing in IntelliJ with the NeoForge client run config.
 - Before committing user-approved gameplay changes, run `./gradlew build`.
+
+## Agent Alignment Rule
+
+- Do not add, expand, or redesign features beyond what the user explicitly requested.
+- When a feature request is ambiguous, ask 1-3 short alignment questions before
+  implementing. Prefer questions that expose real design choices, expected controls,
+  target reference behavior, and acceptance criteria.
+- If a multiple-choice user-input tool is available, use it for concise options; include
+  the best recommended option first. If that tool is unavailable, ask concise plain-text
+  questions.
+- If the user explicitly says to choose for them, "just do it", or that they are tired of
+  deciding, proceed with a conservative implementation that follows existing project
+  patterns and document the assumptions in the final response.
+- For brainstorming requests, do not implement immediately. Present the most important
+  options, ask the few questions needed to narrow them, and wait for confirmation before
+  changing code.
+- Keep durable agent-learning notes short and project-specific. Use `AGENTS.md` for
+  workflow rules, `MainFeatures.md` for current player-facing feature flow, and avoid
+  turning either file into a long process journal.
 
 ## Development Rules
 

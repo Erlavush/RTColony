@@ -153,13 +153,18 @@ public final class RtsCameraState {
     }
 
     public static void pan(float leftImpulse, float forwardImpulse) {
+        pan(leftImpulse, forwardImpulse, 1.0F);
+    }
+
+    public static void pan(float leftImpulse, float forwardImpulse, float speedMultiplier) {
         if (leftImpulse == 0.0F && forwardImpulse == 0.0F) {
             return;
         }
 
         Vec3 forward = Vec3.directionFromRotation(0.0F, targetYaw).multiply(1.0D, 0.0D, 1.0D).normalize();
         Vec3 left = new Vec3(forward.z, 0.0D, -forward.x);
-        double speed = Mth.clamp(targetDistance / 48.0D, 0.35D, 2.5D);
+        double speed = Mth.clamp(targetDistance / 48.0D, 0.35D, 2.5D)
+                * Mth.clamp(speedMultiplier, 0.25F, 3.0F);
         Vec3 delta = forward.scale(forwardImpulse * speed).add(left.scale(leftImpulse * speed));
         targetCenterX += delta.x;
         targetCenterZ += delta.z;
