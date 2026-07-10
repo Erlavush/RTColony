@@ -12,6 +12,8 @@
     "MinecraftMixin",
     "MouseHandlerMixin",
     "SectionOcclusionGraphMixin",
+    "SodiumDefaultChunkRendererMixin",
+    "SodiumRenderRegionMixin",
     "SodiumRenderSectionManagerMixin"
   ],
   "injectors": {
