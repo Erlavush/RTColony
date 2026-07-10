@@ -11,7 +11,8 @@
     "LevelRendererMixin",
     "MinecraftMixin",
     "MouseHandlerMixin",
-    "SectionOcclusionGraphMixin"
+    "SectionOcclusionGraphMixin",
+    "SodiumRenderSectionManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
