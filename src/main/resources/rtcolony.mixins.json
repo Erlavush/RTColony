@@ -4,10 +4,14 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "CameraMixin",
+    "FrustumMixin",
     "GameRendererAccessor",
+    "GameRendererMixin",
     "KeyboardHandlerMixin",
+    "LevelRendererMixin",
     "MinecraftMixin",
-    "MouseHandlerMixin"
+    "MouseHandlerMixin",
+    "SectionOcclusionGraphMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -33,7 +33,7 @@ public abstract class CameraMixin {
         this.detached = true;
         RtsCameraState.advanceRenderState();
         this.setRotation(RtsCameraState.getYaw(), RtsCameraState.getPitch(), 0.0F);
-        this.setPosition(RtsBuildDrawer.isPlacementLocked()
+        this.setPosition(RtsBuildDrawer.isPlacementLocked() && !RtsCameraState.isTrueIsometric()
                 ? RtsCameraState.getPlacementCameraPosition(level)
                 : RtsCameraState.getCameraPosition());
     }

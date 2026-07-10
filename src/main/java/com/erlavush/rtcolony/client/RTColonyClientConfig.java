@@ -57,6 +57,12 @@ public final class RTColonyClientConfig {
         save(minecraft);
     }
 
+    public static void setTerrainStabilizationEnabled(Minecraft minecraft, boolean value) {
+        Config config = get(minecraft);
+        config.terrainStabilizationEnabled = value;
+        save(minecraft);
+    }
+
     private static void refresh(Minecraft minecraft) {
         Path path = path(minecraft);
         try {
@@ -114,6 +120,7 @@ public final class RTColonyClientConfig {
         private boolean invertLockedPlacementOrbitVertical;
         private Boolean edgePanningEnabled = true;
         private Float edgePanningSensitivity = 1.0F;
+        private Boolean terrainStabilizationEnabled = true;
 
         private Config normalized() {
             if (this.edgePanningEnabled == null) {
@@ -121,6 +128,9 @@ public final class RTColonyClientConfig {
             }
             if (this.edgePanningSensitivity == null || this.edgePanningSensitivity <= 0.0F) {
                 this.edgePanningSensitivity = 1.0F;
+            }
+            if (this.terrainStabilizationEnabled == null) {
+                this.terrainStabilizationEnabled = true;
             }
             this.edgePanningSensitivity = Math.max(0.25F, Math.min(3.0F, this.edgePanningSensitivity));
             return this;
@@ -140,6 +150,10 @@ public final class RTColonyClientConfig {
 
         public float edgePanningSensitivity() {
             return this.edgePanningSensitivity == null ? 1.0F : this.edgePanningSensitivity;
+        }
+
+        public boolean terrainStabilizationEnabled() {
+            return Boolean.TRUE.equals(this.terrainStabilizationEnabled);
         }
     }
 }

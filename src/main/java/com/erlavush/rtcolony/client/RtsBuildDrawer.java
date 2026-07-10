@@ -8,6 +8,7 @@ import com.ldtteam.structurize.network.messages.BuildToolPlacementMessage;
 import com.ldtteam.structurize.placement.handlers.placement.PlacementError;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.ldtteam.structurize.storage.StructurePackMeta;
 import com.ldtteam.structurize.storage.StructurePacks;
 import com.ldtteam.structurize.storage.rendering.RenderingCache;
@@ -18,11 +19,13 @@ import com.minecolonies.core.placementhandlers.main.SuppliesHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -50,6 +53,8 @@ public final class RtsBuildDrawer {
     private static final int PLACEMENT_BUTTON_ICON_SOURCE_SIZE = 32;
     private static final int PLACEMENT_BUTTON_GAP = 4;
     private static final long PLACEMENT_VALIDATION_INTERVAL_MS = 250L;
+    private static final double PLACEMENT_GRID_HEIGHT_OFFSET = 0.025D;
+    private static final int PLACEMENT_GRID_DASH_COUNT = 4;
 
     private static final ResourceLocation PAPER = mineColoniesTexture("builder_paper.png");
     private static final ResourceLocation PAPER_SHORT = mineColoniesTexture("builder_paper_short.png");
@@ -301,6 +306,125 @@ public final class RtsBuildDrawer {
         }
 
         renderPlacementHud(minecraft, guiGraphics);
+    }
+
+    static void renderPlacementGrid(PoseStack poseStack, VertexConsumer consumer, Vec3 camera) {
+        if (!previewActive) {
+            return;
+        }
+
+        BlueprintPreviewData previewData = RenderingCache.getBlueprintPreviewData(PREVIEW_KEY);
+        if (previewData == null || previewData.getBlueprint() == null || previewData.getPos() == null) {
+            return;
+        }
+
+        Blueprint blueprint = previewData.getBlueprint();
+        int sizeX = blueprint.getSizeX();
+        int sizeZ = blueprint.getSizeZ();
+        if (sizeX <= 0 || sizeZ <= 0) {
+            return;
+        }
+
+        int color = placementGridColor();
+        float red = ((color >>> 16) & 0xFF) / 255.0F;
+        float green = ((color >>> 8) & 0xFF) / 255.0F;
+        float blue = (color & 0xFF) / 255.0F;
+        float alpha = ((color >>> 24) & 0xFF) / 255.0F;
+
+        for (int x = 0; x <= sizeX; x++) {
+            for (int z = 0; z < sizeZ; z++) {
+                drawDottedGridLine(
+                        poseStack,
+                        consumer,
+                        camera,
+                        gridPoint(previewData, x, z),
+                        gridPoint(previewData, x, z + 1),
+                        red,
+                        green,
+                        blue,
+                        alpha
+                );
+            }
+        }
+        for (int z = 0; z <= sizeZ; z++) {
+            for (int x = 0; x < sizeX; x++) {
+                drawDottedGridLine(
+                        poseStack,
+                        consumer,
+                        camera,
+                        gridPoint(previewData, x, z),
+                        gridPoint(previewData, x + 1, z),
+                        red,
+                        green,
+                        blue,
+                        alpha
+                );
+            }
+        }
+
+        Vec3 origin = gridPoint(previewData, 0, 0);
+        LevelRenderer.renderLineBox(
+                poseStack,
+                consumer,
+                new AABB(origin, origin).inflate(0.12D).move(-camera.x, -camera.y, -camera.z),
+                0.3F,
+                0.7F,
+                1.0F,
+                1.0F
+        );
+    }
+
+    private static Vec3 gridPoint(BlueprintPreviewData previewData, int localX, int localZ) {
+        Blueprint blueprint = previewData.getBlueprint();
+        BlockPos primaryOffset = blueprint.getPrimaryBlockOffset();
+        if (primaryOffset == null) {
+            primaryOffset = BlockPos.ZERO;
+        }
+
+        Vec3 localPoint = new Vec3(
+                localX - primaryOffset.getX(),
+                PLACEMENT_GRID_HEIGHT_OFFSET,
+                localZ - primaryOffset.getZ()
+        );
+        return Vec3.atLowerCornerOf(previewData.getPos()).add(previewData.getRotationMirror().applyToPos(localPoint));
+    }
+
+    private static void drawDottedGridLine(
+            PoseStack poseStack,
+            VertexConsumer consumer,
+            Vec3 camera,
+            Vec3 start,
+            Vec3 end,
+            float red,
+            float green,
+            float blue,
+            float alpha
+    ) {
+        for (int dash = 0; dash < PLACEMENT_GRID_DASH_COUNT; dash++) {
+            double dashStart = dash / (double) PLACEMENT_GRID_DASH_COUNT;
+            double dashEnd = Math.min(1.0D, dashStart + 0.13D);
+            Vec3 segmentStart = start.lerp(end, dashStart);
+            Vec3 segmentEnd = start.lerp(end, dashEnd);
+            LevelRenderer.renderLineBox(
+                    poseStack,
+                    consumer,
+                    new AABB(segmentStart, segmentEnd)
+                            .inflate(0.0025D)
+                            .move(-camera.x, -camera.y, -camera.z),
+                    red,
+                    green,
+                    blue,
+                    alpha
+            );
+        }
+    }
+
+    private static int placementGridColor() {
+        return switch (placementState) {
+            case VALID -> 0xE063E663;
+            case INVALID, MISSING_ITEM -> 0xE0FF6666;
+            case IDLE, LOADING -> 0xD0E0D2B2;
+        };
     }
 
     private static void renderOpen(Minecraft minecraft, GuiGraphics guiGraphics) {

@@ -74,8 +74,12 @@ public final class RtsTargetingState {
 
     private static HitResult raycastFromCursor(Minecraft minecraft) {
         Camera camera = minecraft.gameRenderer.getMainCamera();
-        Vec3 origin = camera.isInitialized() ? camera.getPosition() : RtsCameraState.getCameraPosition();
-        Vec3 direction = getCursorRayDirection(minecraft, camera);
+        Vec3 origin = RtsCameraState.isTrueIsometric()
+                ? getIsometricCursorRayOrigin(minecraft, camera)
+                : camera.isInitialized() ? camera.getPosition() : RtsCameraState.getCameraPosition();
+        Vec3 direction = RtsCameraState.isTrueIsometric()
+                ? getIsometricCursorRayDirection(camera)
+                : getCursorRayDirection(minecraft, camera);
         Vec3 end = origin.add(direction.scale(PICK_DISTANCE));
         BlockHitResult blockHit = minecraft.level.clip(new ClipContext(
                 origin,
@@ -107,6 +111,41 @@ public final class RtsTargetingState {
         }
 
         return blockHit;
+    }
+
+    private static Vec3 getIsometricCursorRayOrigin(Minecraft minecraft, Camera camera) {
+        if (!camera.isInitialized()) {
+            return RtsCameraState.getCameraPosition();
+        }
+
+        double mouseX = Mth.clamp(minecraft.mouseHandler.xpos(), 0.0D, minecraft.getWindow().getScreenWidth());
+        double mouseY = Mth.clamp(minecraft.mouseHandler.ypos(), 0.0D, minecraft.getWindow().getScreenHeight());
+        double width = Math.max(1, minecraft.getWindow().getScreenWidth());
+        double height = Math.max(1, minecraft.getWindow().getScreenHeight());
+        float normalizedX = (float) (mouseX / width * 2.0D - 1.0D);
+        float normalizedY = (float) (1.0D - mouseY / height * 2.0D);
+
+        // In an orthographic view every cursor ray is parallel. Its origin must
+        // move across the camera plane, rather than always starting at the
+        // camera itself as it does with a perspective projection.
+        Vector3f left = camera.getLeftVector();
+        Vector3f up = camera.getUpVector();
+        double horizontalOffset = normalizedX * RtsCameraState.getIsometricHorizontalSpan(minecraft) / 2.0D;
+        double verticalOffset = normalizedY * RtsCameraState.getIsometricVerticalSpan() / 2.0D;
+        return camera.getPosition()
+                // Camera exposes its left axis, so screen-right is its inverse.
+                .add(-left.x() * horizontalOffset + up.x() * verticalOffset,
+                        -left.y() * horizontalOffset + up.y() * verticalOffset,
+                        -left.z() * horizontalOffset + up.z() * verticalOffset);
+    }
+
+    private static Vec3 getIsometricCursorRayDirection(Camera camera) {
+        if (!camera.isInitialized()) {
+            return Vec3.directionFromRotation(RtsCameraState.getPitch(), RtsCameraState.getYaw()).normalize();
+        }
+
+        Vector3f direction = camera.getLookVector();
+        return new Vec3(direction.x(), direction.y(), direction.z());
     }
 
     private static Vec3 getCursorRayDirection(Minecraft minecraft, Camera camera) {

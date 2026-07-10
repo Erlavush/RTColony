@@ -8,8 +8,8 @@ import org.lwjgl.glfw.GLFW;
 public final class RTColonyKeyMappings {
     public static final String CATEGORY = "key.categories.rtcolony";
 
-    public static final KeyMapping TOGGLE_RTS_MODE = new KeyMapping(
-            "key.rtcolony.toggle_rts_mode",
+    public static final KeyMapping CYCLE_CAMERA_MODE = new KeyMapping(
+            "key.rtcolony.cycle_camera_mode",
             InputConstants.KEY_F4,
             CATEGORY
     );
@@ -23,7 +23,7 @@ public final class RTColonyKeyMappings {
     }
 
     public static void register(RegisterKeyMappingsEvent event) {
-        event.register(TOGGLE_RTS_MODE);
+        event.register(CYCLE_CAMERA_MODE);
         event.register(OPEN_CONFIG);
     }
 }

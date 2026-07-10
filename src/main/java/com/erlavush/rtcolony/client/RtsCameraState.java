@@ -1,20 +1,25 @@
 package com.erlavush.rtcolony.client;
 
+import com.erlavush.rtcolony.RTColony;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
 
 public final class RtsCameraState {
     private static final float DEFAULT_YAW = 45.0F;
     private static final float DEFAULT_PITCH = 60.0F;
+    private static final float ISOMETRIC_PITCH = 35.264F;
     private static final float DEFAULT_DISTANCE = 48.0F;
     private static final float MIN_DISTANCE = 14.0F;
     private static final float MAX_DISTANCE = 128.0F;
     private static final float DRAG_ROTATE_DEGREES_PER_PIXEL = 0.18F;
     private static final float DRAG_ORBIT_PITCH_DEGREES_PER_PIXEL = 0.16F;
+    private static final float ISOMETRIC_ROTATE_DRAG_PIXELS = 28.0F;
     private static final float MIN_ORBIT_PITCH = -65.0F;
     private static final float MAX_ORBIT_PITCH = 85.0F;
     private static final float ZOOM_STEP = 4.0F;
@@ -22,6 +27,7 @@ public final class RtsCameraState {
     private static final double RENDER_SMOOTHING_PER_SECOND = 24.0D;
 
     private static boolean active;
+    private static RtsCameraMode mode = RtsCameraMode.PERSPECTIVE;
     private static double targetCenterX;
     private static double targetCenterY;
     private static double targetCenterZ;
@@ -35,6 +41,7 @@ public final class RtsCameraState {
     private static float renderPitch = DEFAULT_PITCH;
     private static float renderDistance = DEFAULT_DISTANCE;
     private static long lastRenderNanos;
+    private static double isometricDragAccumulator;
 
     private RtsCameraState() {
     }
@@ -46,7 +53,7 @@ public final class RtsCameraState {
             targetCenterZ = player.getZ();
         }
         targetYaw = DEFAULT_YAW;
-        targetPitch = DEFAULT_PITCH;
+        targetPitch = pitchForMode();
         targetDistance = DEFAULT_DISTANCE;
         resetRenderState();
         active = player != null;
@@ -65,6 +72,34 @@ public final class RtsCameraState {
 
     public static boolean isActive() {
         return active;
+    }
+
+    public static RtsCameraMode getMode() {
+        return mode;
+    }
+
+    public static boolean isTrueIsometric() {
+        return mode == RtsCameraMode.TRUE_ISOMETRIC;
+    }
+
+    public static void cycleMode() {
+        setMode(mode.next());
+    }
+
+    public static void setMode(RtsCameraMode mode) {
+        if (mode == null || RtsCameraState.mode == mode) {
+            return;
+        }
+
+        RtsCameraState.mode = mode;
+        isometricDragAccumulator = 0.0D;
+        targetPitch = pitchForMode();
+        if (isTrueIsometric()) {
+            targetYaw = snapToIsometricYaw(targetYaw);
+            renderYaw = targetYaw;
+            renderPitch = targetPitch;
+        }
+        RTColony.LOGGER.info("RTS camera mode: {}", isTrueIsometric() ? "true isometric" : "perspective");
     }
 
     public static float getYaw() {
@@ -128,8 +163,12 @@ public final class RtsCameraState {
     }
 
     public static void returnToRtsView() {
-        targetPitch = DEFAULT_PITCH;
-        renderPitch = DEFAULT_PITCH;
+        targetPitch = pitchForMode();
+        renderPitch = targetPitch;
+        if (isTrueIsometric()) {
+            targetYaw = snapToIsometricYaw(targetYaw);
+            renderYaw = targetYaw;
+        }
     }
 
     public static void advanceRenderState() {
@@ -147,6 +186,12 @@ public final class RtsCameraState {
         renderCenterX = Mth.lerp(alpha, renderCenterX, targetCenterX);
         renderCenterY = Mth.lerp(alpha, renderCenterY, targetCenterY);
         renderCenterZ = Mth.lerp(alpha, renderCenterZ, targetCenterZ);
+        if (isTrueIsometric()) {
+            renderYaw = targetYaw;
+            renderPitch = targetPitch;
+            renderDistance = Mth.lerp((float) alpha, renderDistance, targetDistance);
+            return;
+        }
         renderYaw = Mth.rotLerp((float) alpha, renderYaw, targetYaw);
         renderPitch = Mth.lerp((float) alpha, renderPitch, targetPitch);
         renderDistance = Mth.lerp((float) alpha, renderDistance, targetDistance);
@@ -193,6 +238,11 @@ public final class RtsCameraState {
             boolean invertHorizontal,
             boolean invertVertical
     ) {
+        if (isTrueIsometric()) {
+            rotateIsometricFromScreenDrag(deltaX);
+            return;
+        }
+
         if (!active || deltaX == 0.0D && deltaY == 0.0D) {
             return;
         }
@@ -212,13 +262,59 @@ public final class RtsCameraState {
             return;
         }
 
+        if (isTrueIsometric()) {
+            rotateIsometricFromScreenDrag(deltaX);
+            return;
+        }
+
         targetYaw = Mth.wrapDegrees((float) (targetYaw + deltaX * DRAG_ROTATE_DEGREES_PER_PIXEL));
     }
 
-    public static void updateTerrainHeight(ClientLevel level) {
+    public static void rotateIsometricFromScreenDrag(double deltaX) {
+        if (!active || deltaX == 0.0D) {
+            return;
+        }
+
+        isometricDragAccumulator += deltaX;
+        while (Math.abs(isometricDragAccumulator) >= ISOMETRIC_ROTATE_DRAG_PIXELS) {
+            float direction = isometricDragAccumulator > 0.0D ? 1.0F : -1.0F;
+            targetYaw = Mth.wrapDegrees(targetYaw + direction * 90.0F);
+            renderYaw = targetYaw;
+            isometricDragAccumulator -= direction * ISOMETRIC_ROTATE_DRAG_PIXELS;
+        }
+    }
+
+    public static void updateTerrainHeight(ClientLevel level, boolean stabilized) {
+        if (isTrueIsometric()) {
+            return;
+        }
+
         int height = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(targetCenterX), Mth.floor(targetCenterZ));
         double targetY = height + 1.0D;
-        targetCenterY = Mth.lerp(0.12D, targetCenterY, targetY);
+        targetCenterY = Mth.lerp(stabilized ? 0.035D : 0.18D, targetCenterY, targetY);
+    }
+
+    public static Matrix4f getIsometricProjection(Minecraft minecraft) {
+        float verticalSpan = getIsometricVerticalSpan();
+        float horizontalSpan = getIsometricHorizontalSpan(minecraft);
+        return new Matrix4f().setOrtho(
+                -horizontalSpan / 2.0F,
+                horizontalSpan / 2.0F,
+                -verticalSpan / 2.0F,
+                verticalSpan / 2.0F,
+                -3000.0F,
+                3000.0F
+        );
+    }
+
+    public static float getIsometricVerticalSpan() {
+        return Math.max(20.0F, renderDistance * 1.5F);
+    }
+
+    public static float getIsometricHorizontalSpan(Minecraft minecraft) {
+        float aspectRatio = (float) minecraft.getWindow().getScreenWidth()
+                / Math.max(1, minecraft.getWindow().getScreenHeight());
+        return getIsometricVerticalSpan() * aspectRatio;
     }
 
     private static double floorClampedCameraDistance(
@@ -249,5 +345,14 @@ public final class RtsCameraState {
         renderPitch = targetPitch;
         renderDistance = targetDistance;
         lastRenderNanos = 0L;
+        isometricDragAccumulator = 0.0D;
+    }
+
+    private static float pitchForMode() {
+        return isTrueIsometric() ? ISOMETRIC_PITCH : DEFAULT_PITCH;
+    }
+
+    private static float snapToIsometricYaw(float yaw) {
+        return Mth.wrapDegrees(45.0F + Math.round((yaw - 45.0F) / 90.0F) * 90.0F);
     }
 }

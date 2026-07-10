@@ -14,14 +14,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class KeyboardHandlerMixin {
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
     private void rtcolony$handleBuildDrawerHotkey(long window, int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (RtsModeState.isEnabled()
+                && action == GLFW.GLFW_PRESS
+                && key == GLFW.GLFW_KEY_F5
+                && minecraft.screen == null) {
+            RtsModeState.setEnabled(false);
+            ci.cancel();
+            return;
+        }
+
         if (!RtsModeState.isEnabled()
                 || action != GLFW.GLFW_PRESS && action != GLFW.GLFW_REPEAT
-                || Minecraft.getInstance().screen != null) {
+                || minecraft.screen != null) {
             return;
         }
 
         boolean pressed = action == GLFW.GLFW_PRESS;
-        Minecraft minecraft = Minecraft.getInstance();
 
         if (pressed && key == GLFW.GLFW_KEY_B && (modifiers & GLFW.GLFW_MOD_CONTROL) != 0) {
             RtsBuildDrawer.toggle();

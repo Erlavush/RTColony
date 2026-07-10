@@ -38,13 +38,22 @@ public final class RTColonyConfigScreen extends Screen {
 
         this.addRenderableWidget(new EdgePanningSensitivitySlider(centerX - buttonWidth / 2, y + 24, buttonWidth, buttonHeight));
 
+        this.addRenderableWidget(Button.builder(terrainStabilizationLabel(), button -> {
+                    Minecraft minecraft = Minecraft.getInstance();
+                    boolean next = !RTColonyClientConfig.get(minecraft).terrainStabilizationEnabled();
+                    RTColonyClientConfig.setTerrainStabilizationEnabled(minecraft, next);
+                    button.setMessage(terrainStabilizationLabel());
+                })
+                .bounds(centerX - buttonWidth / 2, y + 48, buttonWidth, buttonHeight)
+                .build());
+
         this.addRenderableWidget(Button.builder(horizontalOrbitLabel(), button -> {
                     Minecraft minecraft = Minecraft.getInstance();
                     boolean next = !RTColonyClientConfig.get(minecraft).invertLockedPlacementOrbitHorizontal();
                     RTColonyClientConfig.setInvertLockedPlacementOrbitHorizontal(minecraft, next);
                     button.setMessage(horizontalOrbitLabel());
                 })
-                .bounds(centerX - buttonWidth / 2, y + 74, buttonWidth, buttonHeight)
+                .bounds(centerX - buttonWidth / 2, y + 98, buttonWidth, buttonHeight)
                 .build());
 
         this.addRenderableWidget(Button.builder(verticalOrbitLabel(), button -> {
@@ -53,7 +62,7 @@ public final class RTColonyConfigScreen extends Screen {
                     RTColonyClientConfig.setInvertLockedPlacementOrbitVertical(minecraft, next);
                     button.setMessage(verticalOrbitLabel());
                 })
-                .bounds(centerX - buttonWidth / 2, y + 98, buttonWidth, buttonHeight)
+                .bounds(centerX - buttonWidth / 2, y + 122, buttonWidth, buttonHeight)
                 .build());
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> this.minecraft.setScreen(this.parent))
@@ -76,7 +85,7 @@ public final class RTColonyConfigScreen extends Screen {
                 this.font,
                 Component.translatable("rtcolony.config.section.locked_placement"),
                 this.width / 2,
-                Math.max(30, this.height / 4 + 32),
+                Math.max(30, this.height / 4 + 56),
                 0xA0A0A0
         );
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -118,6 +127,15 @@ public final class RTColonyConfigScreen extends Screen {
         return Component.translatable(
                 "rtcolony.config.edge_panning_speed",
                 Component.literal(Math.round(RTColonyClientConfig.get(Minecraft.getInstance()).edgePanningSensitivity() * 100.0F) + "%")
+        );
+    }
+
+    private static Component terrainStabilizationLabel() {
+        return Component.translatable(
+                "rtcolony.config.terrain_stabilization",
+                Component.translatable(RTColonyClientConfig.get(Minecraft.getInstance()).terrainStabilizationEnabled()
+                        ? "rtcolony.config.value.enabled"
+                        : "rtcolony.config.value.disabled")
         );
     }
 

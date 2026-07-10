@@ -24,7 +24,6 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 public final class RTColonyClientEvents {
-    private static final Component RTS_MODE_LABEL = Component.translatable("rtcolony.hud.rts_mode");
     private static final int EDGE_PAN_PIXELS = 8;
     private static boolean enableRtsModeOnNextWorld = true;
 
@@ -40,14 +39,19 @@ public final class RTColonyClientEvents {
             }
         }
 
-        while (RTColonyKeyMappings.TOGGLE_RTS_MODE.consumeClick()) {
+        while (RTColonyKeyMappings.CYCLE_CAMERA_MODE.consumeClick()) {
             enableRtsModeOnNextWorld = false;
-            RtsModeState.toggle();
+            if (RtsModeState.isEnabled()) {
+                RtsCameraState.cycleMode();
+            } else {
+                RtsModeState.setEnabled(true);
+            }
         }
 
         if (!RtsModeState.isEnabled()) {
             if (enableRtsModeOnNextWorld && minecraft.player != null && minecraft.level != null && minecraft.screen == null) {
                 enableRtsModeOnNextWorld = false;
+                RtsCameraState.setMode(RtsCameraMode.PERSPECTIVE);
                 RtsModeState.setEnabled(true);
             } else {
                 return;
@@ -60,8 +64,11 @@ public final class RTColonyClientEvents {
         }
 
         RtsCameraState.ensureActive(minecraft.player);
-        if (!RtsBuildDrawer.isPlacementLocked()) {
-            RtsCameraState.updateTerrainHeight(minecraft.level);
+        if (!RtsBuildDrawer.isPlacementLocked() && !RtsCameraState.isTrueIsometric()) {
+            RtsCameraState.updateTerrainHeight(
+                    minecraft.level,
+                    RTColonyClientConfig.get(minecraft).terrainStabilizationEnabled()
+            );
         }
         RtsEntityPortraitRenderer.tick();
 
@@ -122,9 +129,10 @@ public final class RTColonyClientEvents {
         }
 
         GuiGraphics guiGraphics = event.getGuiGraphics();
-        int textWidth = minecraft.font.width(RTS_MODE_LABEL);
+        Component modeLabel = rtsModeLabel();
+        int textWidth = minecraft.font.width(modeLabel);
         guiGraphics.fill(6, 6, textWidth + 14, 22, 0xA0000000);
-        guiGraphics.drawString(minecraft.font, RTS_MODE_LABEL, 10, 10, 0xFFFFFF, false);
+        guiGraphics.drawString(minecraft.font, modeLabel, 10, 10, 0xFFFFFF, false);
         RtsSelectionHud.render(minecraft, guiGraphics);
         RtsBuildDrawer.render(minecraft, guiGraphics);
     }
@@ -165,7 +173,15 @@ public final class RTColonyClientEvents {
             drawTargetOutline(poseStack, consumer, camera, hovered, 1.0F, 0.9F, 0.25F, 1.0F);
         }
 
+        RtsBuildDrawer.renderPlacementGrid(poseStack, consumer, camera);
+
         bufferSource.endBatch(RenderType.lines());
+    }
+
+    private static Component rtsModeLabel() {
+        return Component.translatable(RtsCameraState.isTrueIsometric()
+                ? "rtcolony.hud.rts_mode.isometric"
+                : "rtcolony.hud.rts_mode.perspective");
     }
 
     private static void updateEdgePanning(Minecraft minecraft) {
