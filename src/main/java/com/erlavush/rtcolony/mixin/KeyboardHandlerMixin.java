@@ -2,6 +2,7 @@ package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsBuildDrawer;
 import com.erlavush.rtcolony.client.RtsModeState;
+import com.erlavush.rtcolony.client.RtsTargetingState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyboardHandler;
 import org.lwjgl.glfw.GLFW;
@@ -60,8 +61,10 @@ public abstract class KeyboardHandlerMixin {
             return;
         }
 
-        if (key == GLFW.GLFW_KEY_ESCAPE && RtsBuildDrawer.cancelPreview()) {
-            ci.cancel();
+        if (key == GLFW.GLFW_KEY_ESCAPE) {
+            if (RtsBuildDrawer.cancelPreview() || RtsTargetingState.stopFollowing()) {
+                ci.cancel();
+            }
         }
     }
 

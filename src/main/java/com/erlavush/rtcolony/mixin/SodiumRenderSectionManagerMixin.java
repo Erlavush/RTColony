@@ -1,6 +1,7 @@
 package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsCameraState;
+import com.erlavush.rtcolony.client.RtsFocusLensShader;
 import com.erlavush.rtcolony.client.RtsModeState;
 import net.minecraft.client.Camera;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,8 +16,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * sections when RTColony switches to an orthographic isometric projection.
  *
  * This optional compatibility mixin keeps Sodium's ordinary range/frustum
- * culling, but turns off only its directional occlusion traversal in True
- * Isometric mode. Perspective RTS and vanilla views retain Sodium's defaults.
+ * culling, but turns off its directional occlusion traversal in True
+ * Isometric mode and while the focus lens needs background room/cave sections.
+ * Vanilla view retains Sodium's defaults.
  */
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionManager", remap = false)
@@ -27,7 +29,8 @@ public abstract class SodiumRenderSectionManagerMixin {
             boolean spectator,
             CallbackInfoReturnable<Boolean> ci
     ) {
-        if (RtsModeState.isEnabled() && RtsCameraState.isTrueIsometric()) {
+        if (RtsModeState.isEnabled()
+                && (RtsCameraState.isTrueIsometric() || RtsFocusLensShader.isLensActive())) {
             ci.setReturnValue(false);
         }
     }

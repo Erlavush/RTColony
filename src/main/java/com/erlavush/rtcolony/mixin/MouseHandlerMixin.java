@@ -4,6 +4,7 @@ import com.erlavush.rtcolony.client.RtsCameraState;
 import com.erlavush.rtcolony.client.RtsBuildDrawer;
 import com.erlavush.rtcolony.client.RTColonyClientConfig;
 import com.erlavush.rtcolony.client.RtsModeState;
+import com.erlavush.rtcolony.client.RtsSelectionHud;
 import com.erlavush.rtcolony.client.RtsTargetingState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
@@ -84,6 +85,10 @@ public abstract class MouseHandlerMixin {
         }
 
         if (RtsBuildDrawer.handleMousePress(this.minecraft, button, action, this.xpos, this.ypos)) {
+            ci.cancel();
+            return;
+        }
+        if (RtsSelectionHud.handleMousePress(this.minecraft, button, action, this.xpos, this.ypos)) {
             ci.cancel();
         }
     }

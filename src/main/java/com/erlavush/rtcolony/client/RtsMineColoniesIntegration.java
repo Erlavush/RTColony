@@ -5,12 +5,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -27,6 +32,12 @@ import java.util.Set;
  */
 final class RtsMineColoniesIntegration {
     private static final String COLONY_MANAGER_CLASS = "com.minecolonies.api.colony.IColonyManager";
+    private static final String CITIZEN_WINDOW_CLASS = "com.minecolonies.core.client.gui.citizen.MainWindowCitizen";
+    private static final long BUILDING_CACHE_TICKS = 20L;
+
+    private static Level cachedBuildingLevel;
+    private static long nextBuildingCacheTick = Long.MIN_VALUE;
+    private static List<BuildingTarget> cachedBuildingTargets = List.of();
 
     private RtsMineColoniesIntegration() {
     }
@@ -40,7 +51,10 @@ final class RtsMineColoniesIntegration {
             return createCitizenInfo(target.entity());
         }
 
-        if (target.kind() == RtsTargetingState.TargetKind.BLOCK && target.blockPos() != null && minecraft.level != null) {
+        if ((target.kind() == RtsTargetingState.TargetKind.BLOCK
+                || target.kind() == RtsTargetingState.TargetKind.BUILDING)
+                && target.blockPos() != null
+                && minecraft.level != null) {
             return createBuildingInfo(minecraft.level, target.blockPos());
         }
 
@@ -75,6 +89,10 @@ final class RtsMineColoniesIntegration {
 
     private static Optional<SelectionInfo> createBuildingInfo(Level level, BlockPos blockPos) {
         Object buildingView = buildingView(level, blockPos).orElse(null);
+        return createBuildingInfo(buildingView);
+    }
+
+    private static Optional<SelectionInfo> createBuildingInfo(Object buildingView) {
         if (buildingView == null) {
             return Optional.empty();
         }
@@ -96,6 +114,148 @@ final class RtsMineColoniesIntegration {
         lines.add(new Line("Requests", Integer.toString(Math.max(0, requests))));
 
         return Optional.of(new SelectionInfo(SelectionKind.BUILDING, title, lines));
+    }
+
+    static Optional<BuildingTarget> findBuildingAt(Level level, BlockPos blockPos) {
+        if (level == null || blockPos == null) {
+            return Optional.empty();
+        }
+
+        refreshBuildingTargets(level);
+        double x = blockPos.getX() + 0.5D;
+        double y = blockPos.getY() + 0.5D;
+        double z = blockPos.getZ() + 0.5D;
+        return cachedBuildingTargets.stream()
+                .filter(target -> target.bounds().contains(x, y, z))
+                .min(Comparator.comparingDouble(target -> target.bounds().getXsize()
+                        * target.bounds().getYsize()
+                        * target.bounds().getZsize()));
+    }
+
+    static boolean openNativeDetails(Minecraft minecraft, RtsTargetingState.TargetSnapshot target) {
+        if (minecraft == null || minecraft.level == null || target == null) {
+            return false;
+        }
+
+        if (target.kind() == RtsTargetingState.TargetKind.ENTITY && target.entity() != null) {
+            Object citizenView = invokeNoArg(target.entity(), "getCitizenDataView").orElse(null);
+            if (citizenView == null) {
+                return false;
+            }
+
+            try {
+                Class<?> windowClass = Class.forName(CITIZEN_WINDOW_CLASS);
+                for (Constructor<?> constructor : windowClass.getConstructors()) {
+                    Class<?>[] parameterTypes = constructor.getParameterTypes();
+                    if (parameterTypes.length == 1 && parameterTypes[0].isInstance(citizenView)) {
+                        Object window = constructor.newInstance(citizenView);
+                        window.getClass().getMethod("open").invoke(window);
+                        return true;
+                    }
+                }
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+                     | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+                return false;
+            }
+            return false;
+        }
+
+        if (target.kind() == RtsTargetingState.TargetKind.BUILDING && target.blockPos() != null) {
+            Object buildingView = buildingView(minecraft.level, target.blockPos()).orElse(null);
+            if (buildingView == null) {
+                return false;
+            }
+            try {
+                Method method = buildingView.getClass().getMethod("openGui", boolean.class);
+                method.invoke(buildingView, false);
+                return true;
+            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    static void clearCache() {
+        cachedBuildingLevel = null;
+        nextBuildingCacheTick = Long.MIN_VALUE;
+        cachedBuildingTargets = List.of();
+    }
+
+    private static void refreshBuildingTargets(Level level) {
+        long gameTime = level.getGameTime();
+        if (cachedBuildingLevel == level && gameTime < nextBuildingCacheTick) {
+            return;
+        }
+
+        cachedBuildingLevel = level;
+        nextBuildingCacheTick = gameTime + BUILDING_CACHE_TICKS;
+        List<BuildingTarget> targets = new ArrayList<>();
+        Object manager = colonyManager().orElse(null);
+        if (manager == null) {
+            cachedBuildingTargets = List.of();
+            return;
+        }
+
+        try {
+            Method coloniesMethod = manager.getClass().getMethod("getColonyViews", Level.class);
+            Object coloniesValue = coloniesMethod.invoke(manager, level);
+            if (!(coloniesValue instanceof Collection<?> colonies)) {
+                cachedBuildingTargets = List.of();
+                return;
+            }
+
+            for (Object colony : colonies) {
+                Object buildingManager = invokeNoArg(colony, "getClientBuildingManager").orElse(null);
+                Object buildingsValue = invokeNoArg(buildingManager, "getBuildings").orElse(null);
+                if (!(buildingsValue instanceof Map<?, ?> buildings)) {
+                    continue;
+                }
+
+                for (Object buildingView : buildings.values()) {
+                    BlockPos anchor = asBlockPos(invokeNoArg(buildingView, "getPosition").orElse(null));
+                    if (anchor == null) {
+                        anchor = asBlockPos(invokeNoArg(buildingView, "getID").orElse(null));
+                    }
+                    if (anchor == null) {
+                        continue;
+                    }
+
+                    AABB bounds = buildingBounds(level, anchor);
+                    SelectionInfo info = createBuildingInfo(buildingView).orElse(null);
+                    if (info != null) {
+                        targets.add(new BuildingTarget(anchor.immutable(), bounds, info));
+                    }
+                }
+            }
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+            cachedBuildingTargets = List.of();
+            return;
+        }
+
+        cachedBuildingTargets = List.copyOf(targets);
+    }
+
+    private static AABB buildingBounds(Level level, BlockPos anchor) {
+        BlockEntity blockEntity = level.getBlockEntity(anchor);
+        Object corners = invokeNoArg(blockEntity, "getInWorldCorners").orElse(null);
+        BlockPos first = asBlockPos(invokeNoArg(corners, "getA").orElse(null));
+        BlockPos second = asBlockPos(invokeNoArg(corners, "getB").orElse(null));
+        if (first == null || second == null) {
+            return new AABB(anchor);
+        }
+
+        int minX = Math.min(first.getX(), second.getX());
+        int minY = Math.min(first.getY(), second.getY());
+        int minZ = Math.min(first.getZ(), second.getZ());
+        int maxX = Math.max(first.getX(), second.getX());
+        int maxY = Math.max(first.getY(), second.getY());
+        int maxZ = Math.max(first.getZ(), second.getZ());
+        if (maxX - minX > 255 || maxY - minY > 255 || maxZ - minZ > 255) {
+            return new AABB(anchor);
+        }
+        return new AABB(minX, minY, minZ, maxX + 1.0D, maxY + 1.0D, maxZ + 1.0D);
     }
 
     private static Optional<Object> buildingView(Level level, BlockPos blockPos) {
@@ -200,6 +360,10 @@ final class RtsMineColoniesIntegration {
         }
     }
 
+    private static BlockPos asBlockPos(Object value) {
+        return value instanceof BlockPos blockPos ? blockPos : null;
+    }
+
     private static int collectionSize(Object value) {
         if (value instanceof Collection<?> collection) {
             return collection.size();
@@ -283,6 +447,9 @@ final class RtsMineColoniesIntegration {
     }
 
     record SelectionInfo(SelectionKind kind, String title, List<Line> lines) {
+    }
+
+    record BuildingTarget(BlockPos anchor, AABB bounds, SelectionInfo info) {
     }
 
     record Line(String label, String value) {

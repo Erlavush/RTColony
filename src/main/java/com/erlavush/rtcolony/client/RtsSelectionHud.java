@@ -9,6 +9,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Slime;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.Locale;
@@ -18,13 +19,15 @@ import java.util.Optional;
  * Selected unit portrait HUD adapted from Reign of Nether's PortraitRendererUnit,
  * MyRenderer, and HealthBarClientEvents.
  */
-final class RtsSelectionHud {
+public final class RtsSelectionHud {
     private static final int PORTRAIT_FRAME_SIZE = 60;
     private static final int STATS_FRAME_WIDTH = 45;
     private static final int INFO_FRAME_WIDTH = 154;
     private static final int FRAME_HEIGHT = 60;
     private static final int MARGIN = 8;
     private static final int STAT_ICON_SIZE = 8;
+    private static final int ACTION_BUTTON_WIDTH = 80;
+    private static final int ACTION_BUTTON_HEIGHT = 18;
 
     private RtsSelectionHud() {
     }
@@ -38,8 +41,12 @@ final class RtsSelectionHud {
         Optional<RtsMineColoniesIntegration.SelectionInfo> mineColoniesInfo =
                 RtsMineColoniesIntegration.createInfo(minecraft, target);
 
-        if (target.kind() == RtsTargetingState.TargetKind.BLOCK) {
-            mineColoniesInfo.ifPresent(info -> renderMineColoniesBlockInfo(minecraft, guiGraphics, info));
+        if (target.kind() == RtsTargetingState.TargetKind.BLOCK
+                || target.kind() == RtsTargetingState.TargetKind.BUILDING) {
+            mineColoniesInfo.ifPresent(info -> {
+                renderMineColoniesBlockInfo(minecraft, guiGraphics, info);
+                renderActions(minecraft, guiGraphics, actionLayout(minecraft, target, true));
+            });
             return;
         }
 
@@ -93,6 +100,171 @@ final class RtsSelectionHud {
                 x + PORTRAIT_FRAME_SIZE + STATS_FRAME_WIDTH,
                 y
         ));
+        renderActions(minecraft, guiGraphics, actionLayout(minecraft, target, mineColoniesInfo.isPresent()));
+    }
+
+    public static boolean handleMousePress(
+            Minecraft minecraft,
+            int button,
+            int action,
+            double rawMouseX,
+            double rawMouseY
+    ) {
+        if (!RtsModeState.isEnabled()
+                || minecraft.options.hideGui
+                || minecraft.screen != null
+                || action != GLFW.GLFW_PRESS) {
+            return false;
+        }
+
+        RtsTargetingState.TargetSnapshot target = RtsTargetingState.getSelectedTarget();
+        if (target == null) {
+            return false;
+        }
+        if (target.kind() == RtsTargetingState.TargetKind.ENTITY
+                && (target.entity() == null
+                || target.entity().isRemoved()
+                || !(target.entity() instanceof LivingEntity))) {
+            return false;
+        }
+
+        Optional<RtsMineColoniesIntegration.SelectionInfo> info =
+                RtsMineColoniesIntegration.createInfo(minecraft, target);
+        ActionLayout actions = actionLayout(minecraft, target, info.isPresent());
+        int mouseX = scaledMouseX(minecraft, rawMouseX);
+        int mouseY = scaledMouseY(minecraft, rawMouseY);
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && actions != null) {
+            if (actions.followButton() != null && actions.followButton().contains(mouseX, mouseY)) {
+                RtsTargetingState.toggleFollowSelected();
+                return true;
+            }
+            if (actions.detailsButton() != null && actions.detailsButton().contains(mouseX, mouseY)) {
+                RtsMineColoniesIntegration.openNativeDetails(minecraft, target);
+                return true;
+            }
+        }
+        return isMouseOver(minecraft, mouseX, mouseY, target, info.isPresent());
+    }
+
+    static boolean isMouseOver(Minecraft minecraft) {
+        RtsTargetingState.TargetSnapshot target = RtsTargetingState.getSelectedTarget();
+        if (!RtsModeState.isEnabled()
+                || minecraft.options.hideGui
+                || minecraft.screen != null
+                || target == null) {
+            return false;
+        }
+        boolean hasInfo = RtsMineColoniesIntegration.createInfo(minecraft, target).isPresent();
+        return isMouseOver(minecraft, scaledMouseX(minecraft), scaledMouseY(minecraft), target, hasInfo);
+    }
+
+    private static boolean isMouseOver(
+            Minecraft minecraft,
+            int mouseX,
+            int mouseY,
+            RtsTargetingState.TargetSnapshot target,
+            boolean hasInfo
+    ) {
+        int y = minecraft.getWindow().getGuiScaledHeight() - FRAME_HEIGHT - MARGIN;
+        int width;
+        if (target.kind() == RtsTargetingState.TargetKind.ENTITY) {
+            if (target.entity() == null
+                    || target.entity().isRemoved()
+                    || !(target.entity() instanceof LivingEntity)) {
+                return false;
+            }
+            width = PORTRAIT_FRAME_SIZE + STATS_FRAME_WIDTH + (hasInfo ? INFO_FRAME_WIDTH : 0);
+        } else if (hasInfo) {
+            width = INFO_FRAME_WIDTH;
+        } else {
+            return false;
+        }
+        return mouseX >= MARGIN && mouseY >= y - 33 && mouseX < MARGIN + width && mouseY < y + FRAME_HEIGHT;
+    }
+
+    private static ActionLayout actionLayout(
+            Minecraft minecraft,
+            RtsTargetingState.TargetSnapshot target,
+            boolean hasDetails
+    ) {
+        int y = minecraft.getWindow().getGuiScaledHeight() - FRAME_HEIGHT - MARGIN;
+        if (target.kind() == RtsTargetingState.TargetKind.ENTITY) {
+            if (hasDetails) {
+                int x = MARGIN + PORTRAIT_FRAME_SIZE + STATS_FRAME_WIDTH;
+                int width = (INFO_FRAME_WIDTH - 4) / 2;
+                return new ActionLayout(
+                        new Rect(x, y - 32, width, ACTION_BUTTON_HEIGHT),
+                        new Rect(x + width + 4, y - 32, width, ACTION_BUTTON_HEIGHT)
+                );
+            }
+            int x = MARGIN + (PORTRAIT_FRAME_SIZE + STATS_FRAME_WIDTH - ACTION_BUTTON_WIDTH) / 2;
+            return new ActionLayout(new Rect(x, y - 32, ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT), null);
+        }
+        if (target.kind() == RtsTargetingState.TargetKind.BUILDING && hasDetails) {
+            int x = MARGIN + (INFO_FRAME_WIDTH - ACTION_BUTTON_WIDTH) / 2;
+            return new ActionLayout(null, new Rect(x, y - 32, ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT));
+        }
+        return null;
+    }
+
+    private static void renderActions(Minecraft minecraft, GuiGraphics guiGraphics, ActionLayout layout) {
+        if (layout == null) {
+            return;
+        }
+        int mouseX = scaledMouseX(minecraft);
+        int mouseY = scaledMouseY(minecraft);
+        if (layout.followButton() != null) {
+            drawButton(
+                    minecraft,
+                    guiGraphics,
+                    layout.followButton(),
+                    Component.translatable(RtsTargetingState.isFollowingSelected()
+                            ? "rtcolony.selection.stop_follow"
+                            : "rtcolony.selection.follow"),
+                    layout.followButton().contains(mouseX, mouseY)
+            );
+        }
+        if (layout.detailsButton() != null) {
+            drawButton(
+                    minecraft,
+                    guiGraphics,
+                    layout.detailsButton(),
+                    Component.translatable("rtcolony.selection.open_details"),
+                    layout.detailsButton().contains(mouseX, mouseY)
+            );
+        }
+    }
+
+    private static void drawButton(
+            Minecraft minecraft,
+            GuiGraphics guiGraphics,
+            Rect rect,
+            Component label,
+            boolean hovered
+    ) {
+        guiGraphics.fill(
+                rect.x(),
+                rect.y(),
+                rect.x() + rect.width(),
+                rect.y() + rect.height(),
+                hovered ? 0xFFE2BD64 : 0xFF777777
+        );
+        guiGraphics.fill(
+                rect.x() + 1,
+                rect.y() + 1,
+                rect.x() + rect.width() - 1,
+                rect.y() + rect.height() - 1,
+                hovered ? 0xCC594A2C : 0xCC303030
+        );
+        String text = trim(minecraft.font, label.getString(), rect.width() - 6);
+        guiGraphics.drawString(
+                minecraft.font,
+                text,
+                rect.x() + (rect.width() - minecraft.font.width(text)) / 2,
+                rect.y() + 5,
+                0xFFFFFFFF,
+                false
+        );
     }
 
     private static void renderHealthText(GuiGraphics guiGraphics, Font font, LivingEntity entity, int x, int y) {
@@ -232,6 +404,18 @@ final class RtsSelectionHud {
                 / minecraft.getWindow().getScreenHeight());
     }
 
+    private static int scaledMouseX(Minecraft minecraft, double rawMouseX) {
+        return (int) (rawMouseX
+                * minecraft.getWindow().getGuiScaledWidth()
+                / minecraft.getWindow().getScreenWidth());
+    }
+
+    private static int scaledMouseY(Minecraft minecraft, double rawMouseY) {
+        return (int) (rawMouseY
+                * minecraft.getWindow().getGuiScaledHeight()
+                / minecraft.getWindow().getScreenHeight());
+    }
+
     private static String formatNumber(double value) {
         if (Math.abs(value - Math.round(value)) < 0.05D) {
             return Long.toString(Math.round(value));
@@ -263,5 +447,17 @@ final class RtsSelectionHud {
             int color,
             int textXOffset
     ) {
+    }
+
+    private record ActionLayout(Rect followButton, Rect detailsButton) {
+    }
+
+    private record Rect(int x, int y, int width, int height) {
+        private boolean contains(int mouseX, int mouseY) {
+            return mouseX >= this.x
+                    && mouseY >= this.y
+                    && mouseX < this.x + this.width
+                    && mouseY < this.y + this.height;
+        }
     }
 }

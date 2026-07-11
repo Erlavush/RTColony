@@ -27,19 +27,19 @@ implement a feature without the alignment questions and an approved design requi
 - Design detail still needed: decide whether true isometric is strictly orthographic or
   retains any perspective; do not implement until approved.
 
-## Priority 2: Smart Selection and Camera Follow
+## Priority 2: Smart Selection and Camera Follow (Implemented)
 
-- Selecting a citizen/entity can enter camera-follow; manual camera movement or `Esc`
-  should exit follow cleanly.
-- Add temporary camera-to-target obstruction cutaway/transparency, inspired by The Sims
-  and Project Zomboid. Fade only blocking world blocks; restore them immediately when
-  they no longer obstruct the target.
-- Make MineColonies buildings selectable as building-area targets rather than only their
-  primary block. Highlight their bounds and show an RTS building side panel.
-- Citizen/building side panels appear automatically on selection, with a button to open
-  the native MineColonies detail screen.
-- Add controlled citizen/building actions only after read-only data and permission-safe
-  server-authoritative integration are complete.
+- [x] Selecting an entity or citizen offers camera follow. Manual camera movement, `Esc`,
+  or entering build placement exits follow cleanly.
+- [x] A fixed, non-resizable center-screen visibility lens provides a large soft radial
+  cutaway. It uses stable screen-door transparency instead of hiding individual blocks,
+  avoiding block-level pop-in while exposing focused units and interiors.
+- [x] Loaded MineColonies buildings are selectable across their schematic area, highlight
+  their full bounds, and show the RTS building information panel.
+- [x] Citizen and building panels appear automatically on selection and offer a button to
+  open the native MineColonies detail screen.
+- Controlled citizen/building actions remain intentionally gated until each action has a
+  supported, permission-safe, server-authoritative MineColonies integration path.
 
 ## Priority 3: Town Hall Colony Command Screen
 
@@ -83,4 +83,3 @@ implement a feature without the alignment questions and an approved design requi
   group commands.
 - Planning pause/slow mode: reject; it is unsuitable and misleading for multiplayer.
 - Automated next-building recommendations: reject; prefer concrete problem alerts instead.
-

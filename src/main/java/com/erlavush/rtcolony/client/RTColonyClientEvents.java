@@ -64,7 +64,13 @@ public final class RTColonyClientEvents {
         }
 
         RtsCameraState.ensureActive(minecraft.player);
-        if (!RtsBuildDrawer.isPlacementLocked() && !RtsCameraState.isTrueIsometric()) {
+        if (minecraft.screen == null) {
+            minecraft.mouseHandler.releaseMouse();
+            updateEdgePanning(minecraft);
+        }
+
+        boolean followingTarget = RtsTargetingState.tickFollow(minecraft);
+        if (!followingTarget && !RtsBuildDrawer.isPlacementLocked() && !RtsCameraState.isTrueIsometric()) {
             RtsCameraState.updateTerrainHeight(
                     minecraft.level,
                     RTColonyClientConfig.get(minecraft).terrainStabilizationEnabled()
@@ -73,8 +79,6 @@ public final class RTColonyClientEvents {
         RtsEntityPortraitRenderer.tick();
 
         if (minecraft.screen == null) {
-            minecraft.mouseHandler.releaseMouse();
-            updateEdgePanning(minecraft);
             RtsTargetingState.updateHover(minecraft);
             RtsBuildDrawer.tick(minecraft);
         }
@@ -148,12 +152,16 @@ public final class RTColonyClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (!RtsModeState.isEnabled() || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+        if (!RtsModeState.isEnabled()) {
             return;
         }
 
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null || minecraft.screen != null) {
+            return;
+        }
+
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
             return;
         }
 
@@ -192,7 +200,8 @@ public final class RTColonyClientEvents {
                 || minecraft.mouseHandler.isMiddlePressed()
                 || minecraft.mouseHandler.isRightPressed()
                 || RtsBuildDrawer.isPlacementLocked()
-                || RtsBuildDrawer.isMouseOver(minecraft)) {
+                || RtsBuildDrawer.isMouseOver(minecraft)
+                || RtsSelectionHud.isMouseOver(minecraft)) {
             return;
         }
 

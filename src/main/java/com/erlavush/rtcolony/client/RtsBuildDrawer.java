@@ -619,6 +619,7 @@ public final class RtsBuildDrawer {
             return;
         }
 
+        RtsTargetingState.stopFollowing();
         try {
             clearPreview();
             StructurePacks.ensureSelectedPack();
@@ -665,6 +666,7 @@ public final class RtsBuildDrawer {
 
         updatePreviewPosition(minecraft);
         placementMode = PlacementMode.LOCKED_ADJUSTING;
+        RtsTargetingState.stopFollowing();
         focusCameraOnPreview();
         invalidatePlacementValidation();
         updatePlacementValidation(minecraft, true);

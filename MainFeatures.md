@@ -17,16 +17,35 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 ## RTS Camera
 
-- RTS Perspective uses an overhead terrain-following camera with terrain stabilization
-  enabled by default. The client config can disable stabilization for stronger terrain follow.
+- RTS Perspective uses an overhead terrain-following camera. Smooth terrain-height changes
+  are enabled by default; disabling that option snaps camera height to the new terrain level
+  immediately, with no vertical transition animation.
 - True Isometric uses an orthographic, fixed-angle RTS projection with no perspective depth
   or terrain-height bobbing.
-- Mouse wheel zooms.
+- Mouse wheel zooms through a closer range in both RTS camera modes.
 - Edge panning moves the camera when enabled.
 - Edge panning speed is configurable with a slider.
 - Left mouse drag pans.
 - Right mouse drag rotates in RTS Perspective.
 - True Isometric right mouse drag rotates in discrete 90-degree quarter turns.
+
+## Selection and Focus
+
+- Right-click selects a block, entity, citizen, or loaded MineColonies building.
+- The original compact entity portrait and stats container remains at the bottom-left.
+- Entity and citizen selection adds a compact `Follow` action above that container. While
+  following, the camera tracks the entity; manual pan, rotate, zoom, `Esc`, or starting a
+  build preview exits follow cleanly.
+- MineColonies citizens and buildings add a `Details` action that opens their native,
+  read-only MineColonies screen.
+- Loaded MineColonies buildings are selectable across their full schematic bounds. The
+  complete building area is outlined and drives the building information panel.
+- A fixed, large, soft-edged focus lens in the center of the world view makes foreground
+  terrain screen-door transparent. It reveals followed units and interiors without hiding
+  or rebuilding whole blocks, works with Sodium both with and without Iris shaders, and is
+  intentionally not resizable.
+- RTColony does not add citizen or building control actions until a supported,
+  permission-safe, server-authoritative MineColonies path is defined.
 
 ## Build Drawer
 
@@ -77,7 +96,7 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - Current options:
   - edge panning enabled
   - edge panning speed
-  - terrain stabilization
+  - smooth terrain-height changes
   - invert locked placement horizontal orbit
   - invert locked placement vertical orbit
 
@@ -85,6 +104,8 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 - `RtsModeState`: RTS enabled state.
 - `RtsCameraState`: camera center, zoom, pan, rotation, terrain follow, placement orbit.
+- `RtsTargetingState`: cursor targeting, selection, building bounds, and entity follow.
+- `RtsFocusLensShader`: fixed terrain transparency lens for Sodium and Iris terrain shaders.
 - `RtsBuildDrawer`: drawer UI, supply preview, placement states, validation, placement request.
 - `RTColonyClientConfig`: player-facing config persistence.
 - `RTColonyConfigScreen`: in-game config screen.

@@ -23,12 +23,15 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
+import java.util.Optional;
+
 public final class RtsTargetingState {
     private static final double PICK_DISTANCE = 160.0D;
 
     private static HitResult hoverHit;
     private static TargetSnapshot hoveredTarget;
     private static TargetSnapshot selectedTarget;
+    private static int followedEntityId = -1;
 
     private RtsTargetingState() {
     }
@@ -37,6 +40,8 @@ public final class RtsTargetingState {
         hoverHit = null;
         hoveredTarget = null;
         selectedTarget = null;
+        followedEntityId = -1;
+        RtsMineColoniesIntegration.clearCache();
     }
 
     public static void updateHover(Minecraft minecraft) {
@@ -57,7 +62,63 @@ public final class RtsTargetingState {
     }
 
     public static void selectHovered() {
+        if (followedEntityId >= 0
+                && (hoveredTarget == null
+                || hoveredTarget.kind() != TargetKind.ENTITY
+                || hoveredTarget.entity() == null
+                || hoveredTarget.entity().getId() != followedEntityId)) {
+            stopFollowing();
+        }
         selectedTarget = hoveredTarget;
+    }
+
+    static boolean toggleFollowSelected() {
+        if (selectedTarget == null
+                || selectedTarget.kind() != TargetKind.ENTITY
+                || selectedTarget.entity() == null
+                || !selectedTarget.entity().isAlive()) {
+            return false;
+        }
+
+        int entityId = selectedTarget.entity().getId();
+        if (followedEntityId == entityId) {
+            followedEntityId = -1;
+        } else {
+            followedEntityId = entityId;
+        }
+        return true;
+    }
+
+    static boolean tickFollow(Minecraft minecraft) {
+        Entity entity = getFollowedEntity(minecraft);
+        if (entity == null || !entity.isAlive() || entity.isRemoved()) {
+            followedEntityId = -1;
+            return false;
+        }
+
+        RtsCameraState.focusOn(entity.getBoundingBox().getCenter());
+        return true;
+    }
+
+    public static boolean stopFollowing() {
+        if (followedEntityId < 0) {
+            return false;
+        }
+        followedEntityId = -1;
+        return true;
+    }
+
+    static boolean isFollowingSelected() {
+        return selectedTarget != null
+                && selectedTarget.entity() != null
+                && selectedTarget.entity().getId() == followedEntityId;
+    }
+
+    static Entity getFollowedEntity(Minecraft minecraft) {
+        if (followedEntityId < 0 || minecraft == null || minecraft.level == null) {
+            return null;
+        }
+        return minecraft.level.getEntity(followedEntityId);
     }
 
     public static TargetSnapshot getHoveredTarget() {
@@ -177,7 +238,8 @@ public final class RtsTargetingState {
             BlockPos blockPos,
             Entity entity,
             Component title,
-            Component detail
+            Component detail,
+            AABB selectionBounds
     ) {
         private static TargetSnapshot from(ClientLevel level, HitResult hitResult) {
             if (hitResult instanceof EntityHitResult entityHit) {
@@ -188,12 +250,27 @@ public final class RtsTargetingState {
                         null,
                         entity,
                         entity.getDisplayName(),
-                        Component.literal(entityId + " #" + entity.getId())
+                        Component.literal(entityId + " #" + entity.getId()),
+                        null
                 );
             }
 
             if (hitResult instanceof BlockHitResult blockHit && blockHit.getType() == HitResult.Type.BLOCK) {
                 BlockPos pos = blockHit.getBlockPos();
+                Optional<RtsMineColoniesIntegration.BuildingTarget> building =
+                        RtsMineColoniesIntegration.findBuildingAt(level, pos);
+                if (building.isPresent()) {
+                    RtsMineColoniesIntegration.BuildingTarget target = building.get();
+                    return new TargetSnapshot(
+                            TargetKind.BUILDING,
+                            target.anchor(),
+                            null,
+                            Component.literal(target.info().title()),
+                            Component.literal("MineColonies building @ " + target.anchor().toShortString()),
+                            target.bounds()
+                    );
+                }
+
                 BlockState state = level.getBlockState(pos);
                 ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(state.getBlock());
                 return new TargetSnapshot(
@@ -201,7 +278,8 @@ public final class RtsTargetingState {
                         pos,
                         null,
                         state.getBlock().getName(),
-                        Component.literal(blockId + " @ " + pos.toShortString())
+                        Component.literal(blockId + " @ " + pos.toShortString()),
+                        null
                 );
             }
 
@@ -214,6 +292,9 @@ public final class RtsTargetingState {
             }
             if (this.kind == TargetKind.BLOCK && this.blockPos != null) {
                 return new AABB(this.blockPos).inflate(0.002D);
+            }
+            if (this.kind == TargetKind.BUILDING && this.selectionBounds != null) {
+                return this.selectionBounds.inflate(0.01D);
             }
             return null;
         }
@@ -231,6 +312,7 @@ public final class RtsTargetingState {
 
     public enum TargetKind {
         BLOCK,
+        BUILDING,
         ENTITY
     }
 }

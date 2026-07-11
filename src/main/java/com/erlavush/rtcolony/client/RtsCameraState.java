@@ -14,8 +14,8 @@ public final class RtsCameraState {
     private static final float DEFAULT_YAW = 45.0F;
     private static final float DEFAULT_PITCH = 60.0F;
     private static final float ISOMETRIC_PITCH = 35.264F;
-    private static final float DEFAULT_DISTANCE = 48.0F;
-    private static final float MIN_DISTANCE = 14.0F;
+    private static final float DEFAULT_DISTANCE = 36.0F;
+    private static final float MIN_DISTANCE = 8.0F;
     private static final float MAX_DISTANCE = 128.0F;
     private static final float DRAG_ROTATE_DEGREES_PER_PIXEL = 0.18F;
     private static final float DRAG_ORBIT_PITCH_DEGREES_PER_PIXEL = 0.16F;
@@ -157,6 +157,7 @@ public final class RtsCameraState {
     }
 
     public static void shiftFocus(double deltaX, double deltaY, double deltaZ) {
+        RtsTargetingState.stopFollowing();
         targetCenterX += deltaX;
         targetCenterY += deltaY;
         targetCenterZ += deltaZ;
@@ -198,6 +199,10 @@ public final class RtsCameraState {
     }
 
     public static void zoom(double scrollDelta) {
+        if (scrollDelta == 0.0D) {
+            return;
+        }
+        RtsTargetingState.stopFollowing();
         targetDistance = Mth.clamp((float) (targetDistance - scrollDelta * ZOOM_STEP), MIN_DISTANCE, MAX_DISTANCE);
     }
 
@@ -209,6 +214,8 @@ public final class RtsCameraState {
         if (leftImpulse == 0.0F && forwardImpulse == 0.0F) {
             return;
         }
+
+        RtsTargetingState.stopFollowing();
 
         Vec3 forward = Vec3.directionFromRotation(0.0F, targetYaw).multiply(1.0D, 0.0D, 1.0D).normalize();
         Vec3 left = new Vec3(forward.z, 0.0D, -forward.x);
@@ -223,6 +230,8 @@ public final class RtsCameraState {
         if (!active || deltaX == 0.0D && deltaY == 0.0D) {
             return;
         }
+
+        RtsTargetingState.stopFollowing();
 
         Vec3 forward = Vec3.directionFromRotation(0.0F, targetYaw).multiply(1.0D, 0.0D, 1.0D).normalize();
         Vec3 left = new Vec3(forward.z, 0.0D, -forward.x);
@@ -247,6 +256,8 @@ public final class RtsCameraState {
             return;
         }
 
+        RtsTargetingState.stopFollowing();
+
         double adjustedDeltaX = invertHorizontal ? -deltaX : deltaX;
         double adjustedDeltaY = invertVertical ? -deltaY : deltaY;
         targetYaw = Mth.wrapDegrees((float) (targetYaw + adjustedDeltaX * DRAG_ROTATE_DEGREES_PER_PIXEL));
@@ -262,6 +273,8 @@ public final class RtsCameraState {
             return;
         }
 
+        RtsTargetingState.stopFollowing();
+
         if (isTrueIsometric()) {
             rotateIsometricFromScreenDrag(deltaX);
             return;
@@ -274,6 +287,8 @@ public final class RtsCameraState {
         if (!active || deltaX == 0.0D) {
             return;
         }
+
+        RtsTargetingState.stopFollowing();
 
         isometricDragAccumulator += deltaX;
         while (Math.abs(isometricDragAccumulator) >= ISOMETRIC_ROTATE_DRAG_PIXELS) {
@@ -291,7 +306,12 @@ public final class RtsCameraState {
 
         int height = level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(targetCenterX), Mth.floor(targetCenterZ));
         double targetY = height + 1.0D;
-        targetCenterY = Mth.lerp(stabilized ? 0.035D : 0.18D, targetCenterY, targetY);
+        if (stabilized) {
+            targetCenterY = Mth.lerp(0.035D, targetCenterY, targetY);
+        } else {
+            targetCenterY = targetY;
+            renderCenterY = targetY;
+        }
     }
 
     public static Matrix4f getIsometricProjection(Minecraft minecraft) {
@@ -308,7 +328,7 @@ public final class RtsCameraState {
     }
 
     public static float getIsometricVerticalSpan() {
-        return Math.max(20.0F, renderDistance * 1.5F);
+        return Math.max(12.0F, renderDistance * 1.5F);
     }
 
     public static float getIsometricHorizontalSpan(Minecraft minecraft) {
