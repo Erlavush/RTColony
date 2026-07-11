@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -37,6 +38,9 @@ public final class RtsCutawayState {
     private static final double SAMPLE_END_MARGIN = 0.20D;
     private static final double PASSTHROUGH_STEP = 0.08D;
     private static final int MAX_PASSTHROUGH_HITS = 10;
+
+    private static final double SUPPORT_FACE_HEIGHT_MARGIN = 0.18D;
+    private static final double SUPPORT_HIT_END_DISTANCE = 0.85D;
 
     private static int trackedEntityId = -1;
     private static AABB trackedBounds;
@@ -238,7 +242,13 @@ public final class RtsCutawayState {
             Vec3 sample = samples.get(index);
             Vec3 rayStart = rayStartForSample(camera, sample);
 
-            if (isSampleBlocked(level, player, rayStart, sample)) {
+            if (isSampleBlocked(
+                    level,
+                    player,
+                    rayStart,
+                    sample,
+                    targetBounds
+            )) {
                 blockedSamples++;
 
                 if (index == 0) {
@@ -319,7 +329,8 @@ public final class RtsCutawayState {
             ClientLevel level,
             LocalPlayer player,
             Vec3 start,
-            Vec3 end
+            Vec3 end,
+            AABB targetBounds
     ) {
         Vec3 delta = end.subtract(start);
         double totalDistance = delta.length();
@@ -356,6 +367,15 @@ public final class RtsCutawayState {
             BlockPos blockPos = hit.getBlockPos();
             BlockState blockState = level.getBlockState(blockPos);
 
+            if (isTargetSupportSurface(
+                    hit,
+                    hitLocation,
+                    end,
+                    targetBounds
+            )) {
+                return false;
+            }
+
             if (isVisualBlocker(level, blockPos, blockState)) {
                 return true;
             }
@@ -373,6 +393,27 @@ public final class RtsCutawayState {
         }
 
         return false;
+    }
+
+    private static boolean isTargetSupportSurface(
+            BlockHitResult hit,
+            Vec3 hitLocation,
+            Vec3 targetSample,
+            AABB targetBounds
+    ) {
+        if (hit.getDirection() != Direction.UP) {
+            return false;
+        }
+
+        double protectedFloorY =
+                targetBounds.minY + SUPPORT_FACE_HEIGHT_MARGIN;
+
+        if (hitLocation.y > protectedFloorY) {
+            return false;
+        }
+
+        return hitLocation.distanceTo(targetSample)
+                <= SUPPORT_HIT_END_DISTANCE;
     }
 
     private static boolean isVisualBlocker(

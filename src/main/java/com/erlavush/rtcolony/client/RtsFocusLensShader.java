@@ -39,18 +39,20 @@ public final class RtsFocusLensShader {
 
     private static final String UNIFORMS = """
 
-            // RTColony target-aware clean cutaway uniforms.
+            // RTColony target-aware, ground-safe clean cutaway uniforms.
             uniform float rtcolony_LensActive;
             uniform vec2 rtcolony_LensCenter;
             uniform vec2 rtcolony_LensRadius;
             uniform float rtcolony_LensTargetDepth;
+            uniform float rtcolony_LensFloorY;
 
             """;
 
     private static final String MAIN_PREFIX = """
 
                 if (rtcolony_LensActive > 0.5
-                        && gl_FragCoord.z < rtcolony_LensTargetDepth) {
+                        && gl_FragCoord.z < rtcolony_LensTargetDepth
+                        && gl_FragCoord.y >= rtcolony_LensFloorY) {
                     vec2 rtcolony_LensSafeRadius = max(
                             rtcolony_LensRadius,
                             vec2(1.0)
@@ -157,7 +159,7 @@ public final class RtsFocusLensShader {
         UniformLocations locations = UNIFORM_LOCATIONS.computeIfAbsent(
                 program,
                 UniformLocations::find
-        );
+            );
 
         if (locations.active() < 0) {
             return;
@@ -183,6 +185,10 @@ public final class RtsFocusLensShader {
         upload1f(
                 locations.targetDepth(),
                 uniforms.targetDepth()
+        );
+        upload1f(
+                locations.floorY(),
+                uniforms.floorY()
         );
     }
 
@@ -281,8 +287,14 @@ public final class RtsFocusLensShader {
                 minimumRadiusX,
                 maximumRadiusX
         );
+
+        float bodySpanAboveFeet = Math.max(
+                1.0F,
+                projected.maxY() - projected.maxFeetY()
+        );
+
         float radiusY = Mth.clamp(
-                projected.height() * 0.5F + padding,
+                bodySpanAboveFeet * 0.72F + padding,
                 minimumRadiusY,
                 maximumRadiusY
         );
@@ -295,19 +307,30 @@ public final class RtsFocusLensShader {
             return null;
         }
 
-        float targetDepth = projected.maxDepth() - DEPTH_EPSILON;
+        float targetDepth = projected.upperBodyDepth() - DEPTH_EPSILON;
+
+        float floorMargin = Mth.clamp(
+                minimumDimension * 0.008F,
+                4.0F,
+                12.0F
+        );
+
+        float floorY = projected.maxFeetY() + floorMargin;
+
         if (!Float.isFinite(targetDepth)
                 || targetDepth <= 0.0F
-                || targetDepth >= 1.0F) {
+                || targetDepth >= 1.0F
+                || !Float.isFinite(floorY)) {
             return null;
         }
 
         return new LensUniforms(
                 projected.centerX(),
-                projected.centerY(),
+                projected.cutawayCenterY(),
                 radiusX,
                 radiusY,
-                targetDepth
+                targetDepth,
+                floorY
         );
     }
 
@@ -323,11 +346,76 @@ public final class RtsFocusLensShader {
             return null;
         }
 
+        Vec3 boundsCenter = bounds.getCenter();
+        double heightVal = Math.max(0.01D, bounds.getYsize());
+
+        ProjectedPoint upperBody = projectPoint(
+                new Vec3(
+                        boundsCenter.x,
+                        bounds.minY + heightVal * 0.62D,
+                        boundsCenter.z
+                ),
+                camera,
+                inverseCameraRotation,
+                projection,
+                width,
+                height
+        );
+
+        if (upperBody == null) {
+            return null;
+        }
+
+        ProjectedPoint[] feet = {
+                projectPoint(
+                        new Vec3(bounds.minX, bounds.minY, bounds.minZ),
+                        camera,
+                        inverseCameraRotation,
+                        projection,
+                        width,
+                        height
+                ),
+                projectPoint(
+                        new Vec3(bounds.minX, bounds.minY, bounds.maxZ),
+                        camera,
+                        inverseCameraRotation,
+                        projection,
+                        width,
+                        height
+                ),
+                projectPoint(
+                        new Vec3(bounds.maxX, bounds.minY, bounds.minZ),
+                        camera,
+                        inverseCameraRotation,
+                        projection,
+                        width,
+                        height
+                ),
+                projectPoint(
+                        new Vec3(bounds.maxX, bounds.minY, bounds.maxZ),
+                        camera,
+                        inverseCameraRotation,
+                        projection,
+                        width,
+                        height
+                )
+        };
+
+        float maxFeetY = Float.NEGATIVE_INFINITY;
+        for (ProjectedPoint foot : feet) {
+            if (foot != null) {
+                maxFeetY = Math.max(maxFeetY, foot.screenY());
+            }
+        }
+
+        if (!Float.isFinite(maxFeetY)) {
+            return null;
+        }
+
         float minX = Float.POSITIVE_INFINITY;
         float minY = Float.POSITIVE_INFINITY;
         float maxX = Float.NEGATIVE_INFINITY;
         float maxY = Float.NEGATIVE_INFINITY;
-        float maxDepth = Float.NEGATIVE_INFINITY;
         int validPoints = 0;
 
         double[] xValues = {bounds.minX, bounds.maxX};
@@ -337,37 +425,23 @@ public final class RtsFocusLensShader {
         for (double x : xValues) {
             for (double y : yValues) {
                 for (double z : zValues) {
-                    Vector4f clip = project(
+                    ProjectedPoint point = projectPoint(
                             new Vec3(x, y, z),
                             camera,
                             inverseCameraRotation,
-                            projection
+                            projection,
+                            width,
+                            height
                     );
 
-                    if (!Float.isFinite(clip.w())
-                            || clip.w() <= 1.0E-6F) {
+                    if (point == null) {
                         continue;
                     }
 
-                    float inverseW = 1.0F / clip.w();
-                    float ndcX = clip.x() * inverseW;
-                    float ndcY = clip.y() * inverseW;
-                    float depth = clip.z() * inverseW * 0.5F + 0.5F;
-
-                    if (!Float.isFinite(ndcX)
-                            || !Float.isFinite(ndcY)
-                            || !Float.isFinite(depth)) {
-                        continue;
-                    }
-
-                    float screenX = (ndcX * 0.5F + 0.5F) * width;
-                    float screenY = (ndcY * 0.5F + 0.5F) * height;
-
-                    minX = Math.min(minX, screenX);
-                    minY = Math.min(minY, screenY);
-                    maxX = Math.max(maxX, screenX);
-                    maxY = Math.max(maxY, screenY);
-                    maxDepth = Math.max(maxDepth, depth);
+                    minX = Math.min(minX, point.screenX());
+                    minY = Math.min(minY, point.screenY());
+                    maxX = Math.max(maxX, point.screenX());
+                    maxY = Math.max(maxY, point.screenY());
                     validPoints++;
                 }
             }
@@ -377,8 +451,7 @@ public final class RtsFocusLensShader {
                 || !Float.isFinite(minX)
                 || !Float.isFinite(minY)
                 || !Float.isFinite(maxX)
-                || !Float.isFinite(maxY)
-                || !Float.isFinite(maxDepth)) {
+                || !Float.isFinite(maxY)) {
             return null;
         }
 
@@ -387,7 +460,46 @@ public final class RtsFocusLensShader {
                 minY,
                 maxX,
                 maxY,
-                maxDepth
+                upperBody.depth(),
+                maxFeetY
+        );
+    }
+
+    private static ProjectedPoint projectPoint(
+            Vec3 point,
+            Camera camera,
+            Quaternionf inverseCameraRotation,
+            Matrix4f projection,
+            int width,
+            int height
+    ) {
+        Vector4f clip = project(
+                point,
+                camera,
+                inverseCameraRotation,
+                projection
+        );
+
+        if (!Float.isFinite(clip.w())
+                || clip.w() <= 1.0E-6F) {
+            return null;
+        }
+
+        float inverseW = 1.0F / clip.w();
+        float ndcX = clip.x() * inverseW;
+        float ndcY = clip.y() * inverseW;
+        float depth = clip.z() * inverseW * 0.5F + 0.5F;
+
+        if (!Float.isFinite(ndcX)
+                || !Float.isFinite(ndcY)
+                || !Float.isFinite(depth)) {
+            return null;
+        }
+
+        return new ProjectedPoint(
+                (ndcX * 0.5F + 0.5F) * width,
+                (ndcY * 0.5F + 0.5F) * height,
+                depth
         );
     }
 
@@ -403,7 +515,7 @@ public final class RtsFocusLensShader {
                 (float) relative.x,
                 (float) relative.y,
                 (float) relative.z
-            ).rotate(inverseCameraRotation);
+        ).rotate(inverseCameraRotation);
 
         return new Vector4f(
                 viewSpace,
@@ -477,7 +589,15 @@ public final class RtsFocusLensShader {
             float centerY,
             float radiusX,
             float radiusY,
-            float targetDepth
+            float targetDepth,
+            float floorY
+    ) {
+    }
+
+    private record ProjectedPoint(
+            float screenX,
+            float screenY,
+            float depth
     ) {
     }
 
@@ -486,7 +606,8 @@ public final class RtsFocusLensShader {
             float minY,
             float maxX,
             float maxY,
-            float maxDepth
+            float upperBodyDepth,
+            float maxFeetY
     ) {
         private float width() {
             return Math.max(0.0F, maxX - minX);
@@ -500,8 +621,10 @@ public final class RtsFocusLensShader {
             return (minX + maxX) * 0.5F;
         }
 
-        private float centerY() {
-            return (minY + maxY) * 0.5F;
+        private float cutawayCenterY() {
+            float lower = maxFeetY;
+            float upper = maxY;
+            return lower + (upper - lower) * 0.58F;
         }
     }
 
@@ -509,7 +632,8 @@ public final class RtsFocusLensShader {
             int active,
             int center,
             int radius,
-            int targetDepth
+            int targetDepth,
+            int floorY
     ) {
         private static UniformLocations find(int program) {
             return new UniformLocations(
@@ -528,6 +652,10 @@ public final class RtsFocusLensShader {
                     GL20.glGetUniformLocation(
                             program,
                             "rtcolony_LensTargetDepth"
+                    ),
+                    GL20.glGetUniformLocation(
+                            program,
+                            "rtcolony_LensFloorY"
                     )
             );
         }
