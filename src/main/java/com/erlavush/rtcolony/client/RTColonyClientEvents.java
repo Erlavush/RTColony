@@ -50,6 +50,7 @@ public final class RTColonyClientEvents {
 
         if (!RtsModeState.isEnabled()) {
             RtsCutawayState.clear();
+            RtsSodiumCutaway.clear();
 
             if (enableRtsModeOnNextWorld
                     && minecraft.player != null
@@ -65,6 +66,7 @@ public final class RTColonyClientEvents {
 
         if (minecraft.player == null || minecraft.level == null) {
             RtsCutawayState.clear();
+            RtsSodiumCutaway.clear();
             RtsModeState.setEnabled(false);
             return;
         }
@@ -96,6 +98,7 @@ public final class RTColonyClientEvents {
         }
 
         RtsCutawayState.tick(minecraft);
+        RtsSodiumCutaway.tick(minecraft);
     }
 
     @SubscribeEvent

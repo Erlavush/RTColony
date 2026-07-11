@@ -32,8 +32,10 @@ implement a feature without the alignment questions and an approved design requi
 - [x] Selecting an entity or citizen offers camera follow. Manual camera movement, `Esc`,
   or entering build placement exits follow cleanly.
 - [x] A selected/followed entity receives a target-aware clean terrain cutaway
-  only while genuinely obstructed. The cutaway tracks the projected entity
-  bounds, avoids full-area dithering, and closes when line of sight is restored.
+  only while genuinely obstructed. The cutaway uses Sodium mesh omission,
+  a camera-to-entity cone, and a connected-air roof flood derived from Dungeons
+  Perspective. It avoids full-area dithering and closes when line of sight is
+  restored.
 - [x] Loaded MineColonies buildings are selectable across their schematic area, highlight
   their full bounds, and show the RTS building information panel.
 - [x] Citizen and building panels appear automatically on selection and offer a button to

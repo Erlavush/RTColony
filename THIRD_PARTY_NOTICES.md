@@ -81,3 +81,15 @@ rotation, mirroring, movement controls, structure packs, and placement messages.
 MineFortress is intended as a reference for RTS camera, selection, and vanilla-style
 Minecraft GUI behavior. If RTColony copies substantial MineFortress code or assets, keep
 the MIT copyright and permission notice with the copied/adapted material.
+
+## Dungeons Perspective
+
+- Repository: `https://github.com/cleannrooster/dungeons-perspective`
+- Local reference: `references/dungeons-perspective`
+- License: MIT, as clarified by the repository owner in issue #26
+- Copyright: cleannrooster and Dungeons Perspective contributors
+
+RTColony's Sodium terrain cutaway is adapted from Dungeons Perspective's block-renderer
+mixin, camera-to-entity cone/cylinder culling, connected-air `FloodCuller`, and affected
+section rebuild approach. RTColony changes the focus to its selected/followed entity and
+also rebuilds when the camera, target, animation, or approved blocker set changes.

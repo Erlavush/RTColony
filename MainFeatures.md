@@ -41,16 +41,22 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - Loaded MineColonies buildings are selectable across their full schematic bounds. The
   complete building area is outlined and drives the building information panel.
 - When a selected or followed entity becomes genuinely hidden behind terrain,
-  RTColony enables a target-aware clean cutaway around that entity.
+  RTColony enables a target-aware Minecraft Dungeons-style cutaway around that
+  entity.
 - The cutaway is disabled when no entity is selected/followed or when the entity
   is already visible.
-- The cutaway follows the entity's projected screen bounds and opens/closes by
-  resizing a clean ellipse. It does not use full-area dotted or screen-door
-  transparency.
+- The cutaway removes approved foreground block models while Sodium builds the
+  affected chunk meshes. It does not use a screen-space ellipse, dotted effect,
+  or screen-door transparency.
+- A camera-to-entity cone clears nearby foreground blocks, while a connected-air
+  flood fill opens roofs and ceilings around an entity inside a room or cave.
+- The opening expands and contracts with the existing cutaway animation. Camera
+  rotation, target movement, and blocker changes rebuild the affected Sodium
+  sections immediately instead of waiting for the player to move.
 - Multi-point line-of-sight checks and short hysteresis windows prevent
   flickering near wall and foliage edges.
-- Sodium and Iris terrain compatibility remains supported through the existing
-  shader-patching path.
+- Because the cutaway changes Sodium's compiled terrain geometry rather than
+  patching fragment shaders, the same cutaway is used with Iris shader packs.
 - RTColony does not add citizen or building control actions until a supported,
   permission-safe, server-authoritative MineColonies path is defined.
 
@@ -112,7 +118,8 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - `RtsModeState`: RTS enabled state.
 - `RtsCameraState`: camera center, zoom, pan, rotation, terrain follow, placement orbit.
 - `RtsTargetingState`: cursor targeting, selection, building bounds, and entity follow.
-- `RtsFocusLensShader`: target-aware terrain cutaway lens for Sodium and Iris terrain shaders.
+- `RtsSodiumCutaway`: Dungeons Perspective-based entity cone, interior flood fill,
+  and Sodium section rebuild state.
 - `RtsBuildDrawer`: drawer UI, supply preview, placement states, validation, placement request.
 - `RTColonyClientConfig`: player-facing config persistence.
 - `RTColonyConfigScreen`: in-game config screen.

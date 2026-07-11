@@ -1,13 +1,11 @@
 package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsCameraState;
-import com.erlavush.rtcolony.client.RtsFocusLensShader;
 import com.erlavush.rtcolony.client.RtsModeState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
@@ -23,20 +21,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.chunk.DefaultChunkRenderer", remap = false)
 public abstract class SodiumDefaultChunkRendererMixin {
-    @Inject(
-            method = "render",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/caffeinemc/mods/sodium/client/render/chunk/lists/ChunkRenderListIterable;iterator(Z)Ljava/util/Iterator;",
-                    shift = At.Shift.BEFORE
-            ),
-            remap = false,
-            require = 0
-    )
-    private void rtcolony$uploadFocusLensUniforms(CallbackInfo ci) {
-        RtsFocusLensShader.uploadToCurrentProgram();
-    }
-
     @Inject(method = "getVisibleFaces", at = @At("HEAD"), cancellable = true, remap = false)
     private static void rtcolony$keepOrthographicFaces(
             int cameraX,

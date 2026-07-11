@@ -7,16 +7,15 @@
     "FrustumMixin",
     "GameRendererAccessor",
     "GameRendererMixin",
-    "IrisSodiumProgramsMixin",
     "KeyboardHandlerMixin",
     "LevelRendererMixin",
     "MinecraftMixin",
     "MouseHandlerMixin",
     "SectionOcclusionGraphMixin",
     "SodiumDefaultChunkRendererMixin",
+    "SodiumBlockRendererMixin",
     "SodiumRenderRegionMixin",
-    "SodiumRenderSectionManagerMixin",
-    "SodiumShaderLoaderMixin"
+    "SodiumRenderSectionManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -1,8 +1,8 @@
 package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsCameraState;
-import com.erlavush.rtcolony.client.RtsFocusLensShader;
 import com.erlavush.rtcolony.client.RtsModeState;
+import com.erlavush.rtcolony.client.RtsSodiumCutaway;
 import net.minecraft.client.Camera;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -30,7 +30,7 @@ public abstract class SodiumRenderSectionManagerMixin {
             CallbackInfoReturnable<Boolean> ci
     ) {
         if (RtsModeState.isEnabled()
-                && (RtsCameraState.isTrueIsometric() || RtsFocusLensShader.isLensActive())) {
+                && (RtsCameraState.isTrueIsometric() || RtsSodiumCutaway.isActive())) {
             ci.setReturnValue(false);
         }
     }
