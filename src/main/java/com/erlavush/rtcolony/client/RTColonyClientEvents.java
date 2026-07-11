@@ -49,7 +49,12 @@ public final class RTColonyClientEvents {
         }
 
         if (!RtsModeState.isEnabled()) {
-            if (enableRtsModeOnNextWorld && minecraft.player != null && minecraft.level != null && minecraft.screen == null) {
+            RtsCutawayState.clear();
+
+            if (enableRtsModeOnNextWorld
+                    && minecraft.player != null
+                    && minecraft.level != null
+                    && minecraft.screen == null) {
                 enableRtsModeOnNextWorld = false;
                 RtsCameraState.setMode(RtsCameraMode.PERSPECTIVE);
                 RtsModeState.setEnabled(true);
@@ -59,6 +64,7 @@ public final class RTColonyClientEvents {
         }
 
         if (minecraft.player == null || minecraft.level == null) {
+            RtsCutawayState.clear();
             RtsModeState.setEnabled(false);
             return;
         }
@@ -69,19 +75,27 @@ public final class RTColonyClientEvents {
             updateEdgePanning(minecraft);
         }
 
-        boolean followingTarget = RtsTargetingState.tickFollow(minecraft);
-        if (!followingTarget && !RtsBuildDrawer.isPlacementLocked() && !RtsCameraState.isTrueIsometric()) {
+        boolean followingTarget =
+                RtsTargetingState.tickFollow(minecraft);
+
+        if (!followingTarget
+                && !RtsBuildDrawer.isPlacementLocked()
+                && !RtsCameraState.isTrueIsometric()) {
             RtsCameraState.updateTerrainHeight(
                     minecraft.level,
-                    RTColonyClientConfig.get(minecraft).terrainStabilizationEnabled()
+                    RTColonyClientConfig.get(minecraft)
+                            .terrainStabilizationEnabled()
             );
         }
+
         RtsEntityPortraitRenderer.tick();
 
         if (minecraft.screen == null) {
             RtsTargetingState.updateHover(minecraft);
             RtsBuildDrawer.tick(minecraft);
         }
+
+        RtsCutawayState.tick(minecraft);
     }
 
     @SubscribeEvent

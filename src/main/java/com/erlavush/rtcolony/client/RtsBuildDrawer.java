@@ -134,8 +134,13 @@ public final class RtsBuildDrawer {
         return confirmPlacement(minecraft);
     }
 
+    public static boolean isPreviewActive() {
+        return previewActive;
+    }
+
     public static boolean isPlacementLocked() {
-        return previewActive && placementMode == PlacementMode.LOCKED_ADJUSTING;
+        return previewActive
+                && placementMode == PlacementMode.LOCKED_ADJUSTING;
     }
 
     public static boolean rotatePreview() {

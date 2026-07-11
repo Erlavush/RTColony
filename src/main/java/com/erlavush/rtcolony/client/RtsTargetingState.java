@@ -41,6 +41,7 @@ public final class RtsTargetingState {
         hoveredTarget = null;
         selectedTarget = null;
         followedEntityId = -1;
+        RtsCutawayState.clear();
         RtsMineColoniesIntegration.clearCache();
     }
 

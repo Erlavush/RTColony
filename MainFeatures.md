@@ -40,10 +40,17 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
   read-only MineColonies screen.
 - Loaded MineColonies buildings are selectable across their full schematic bounds. The
   complete building area is outlined and drives the building information panel.
-- A fixed, large, soft-edged focus lens in the center of the world view makes foreground
-  terrain screen-door transparent. It reveals followed units and interiors without hiding
-  or rebuilding whole blocks, works with Sodium both with and without Iris shaders, and is
-  intentionally not resizable.
+- When a selected or followed entity becomes genuinely hidden behind terrain,
+  RTColony enables a target-aware clean cutaway around that entity.
+- The cutaway is disabled when no entity is selected/followed or when the entity
+  is already visible.
+- The cutaway follows the entity's projected screen bounds and opens/closes by
+  resizing a clean ellipse. It does not use full-area dotted or screen-door
+  transparency.
+- Multi-point line-of-sight checks and short hysteresis windows prevent
+  flickering near wall and foliage edges.
+- Sodium and Iris terrain compatibility remains supported through the existing
+  shader-patching path.
 - RTColony does not add citizen or building control actions until a supported,
   permission-safe, server-authoritative MineColonies path is defined.
 
@@ -105,7 +112,7 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - `RtsModeState`: RTS enabled state.
 - `RtsCameraState`: camera center, zoom, pan, rotation, terrain follow, placement orbit.
 - `RtsTargetingState`: cursor targeting, selection, building bounds, and entity follow.
-- `RtsFocusLensShader`: fixed terrain transparency lens for Sodium and Iris terrain shaders.
+- `RtsFocusLensShader`: target-aware terrain cutaway lens for Sodium and Iris terrain shaders.
 - `RtsBuildDrawer`: drawer UI, supply preview, placement states, validation, placement request.
 - `RTColonyClientConfig`: player-facing config persistence.
 - `RTColonyConfigScreen`: in-game config screen.

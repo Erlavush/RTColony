@@ -31,9 +31,9 @@ implement a feature without the alignment questions and an approved design requi
 
 - [x] Selecting an entity or citizen offers camera follow. Manual camera movement, `Esc`,
   or entering build placement exits follow cleanly.
-- [x] A fixed, non-resizable center-screen visibility lens provides a large soft radial
-  cutaway. It uses stable screen-door transparency instead of hiding individual blocks,
-  avoiding block-level pop-in while exposing focused units and interiors.
+- [x] A selected/followed entity receives a target-aware clean terrain cutaway
+  only while genuinely obstructed. The cutaway tracks the projected entity
+  bounds, avoids full-area dithering, and closes when line of sight is restored.
 - [x] Loaded MineColonies buildings are selectable across their schematic area, highlight
   their full bounds, and show the RTS building information panel.
 - [x] Citizen and building panels appear automatically on selection and offer a button to
