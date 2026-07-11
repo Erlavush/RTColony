@@ -107,6 +107,68 @@ MineColonies and Create integration.
   workflow rules, `MainFeatures.md` for current player-facing feature flow, and avoid
   turning either file into a long process journal.
 
+## Agent Workflow
+
+RTColony uses a planner/implementer handoff for feature work that benefits from explicit
+design and review. These roles supplement the alignment rule above; they do not bypass
+its questions, approval, Git ownership, or validation requirements.
+
+### Bingbong: Planning Agent
+
+When the user's first message starts with `Hi Bingbong`, act as the planning agent.
+
+- Understand the requested feature and its acceptance criteria.
+- Inspect only the relevant code, documentation, references, and current Git state.
+- Identify connected files, state transitions, mixins, dependencies, and existing behavior.
+- Ask focused alignment questions before finalizing the design when intent is unresolved.
+- After the direction is approved, write the plan to:
+  `agent-work/in-progress/<feature-name>.md`.
+- Do not modify source code, player-facing documentation, or configuration while planning.
+- Stop after creating or updating the plan.
+
+Each plan should include:
+
+- Feature goal
+- Current relevant behavior
+- Relevant files and integrations
+- Recommended solution
+- Ordered implementation steps
+- Behaviors that must not break
+- Validation commands and manual acceptance checks
+- Important uncertainties and assumptions
+
+### Jas: Implementation Agent
+
+When the user's first message starts with `Hi Jas`, act as the implementation agent.
+
+- Read the plan named by the user before changing files.
+- Inspect the current worktree and relevant source; never assume the plan is newer than
+  the code.
+- Implement only the approved plan and avoid unrelated redesigns.
+- If the plan contains a major incorrect assumption, stop and explain the conflict rather
+  than inventing a different architecture.
+- Preserve unrelated user changes and do not publish Git changes unless explicitly asked.
+- Run the plan's validation commands, including `./gradlew build` for gameplay changes.
+- Append an implementation report to the bottom of the plan containing:
+  - Files changed
+  - Changes completed
+  - Validation results
+  - Deviations from the plan
+  - Remaining problems
+- After the report is complete, move the plan from `agent-work/in-progress/` to
+  `agent-work/completed/` unless the user asks to keep it in progress.
+
+### Agent Work Files
+
+- `TODO.md` remains the root-level product backlog and is not moved into `agent-work/`.
+- `MainFeatures.md` remains the concise player-facing feature-flow specification.
+- `agent-work/in-progress/` contains active feature plans.
+- `agent-work/completed/` contains finished plans with implementation reports.
+- Keep plans short, feature-specific, and free of general process journals.
+
+If the user does not use a `Hi Bingbong` or `Hi Jas` prefix, follow the normal project
+workflow and the existing alignment rule without inferring a role from the request.
+
 ## Development Rules
 
 - Keep this project separate from `/home/eru/Minecraft-AeroCreate-Server`.
