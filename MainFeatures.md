@@ -32,6 +32,9 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 ## Selection and Focus
 
 - Right-click selects a block, entity, citizen, or loaded MineColonies building.
+- Selected entities use Minecraft's model-shaped white outline pass; hovered entities
+  use the same silhouette outline in yellow. Block and building targets retain their
+  geometric selection outlines.
 - The original compact entity portrait and stats container remains at the bottom-left.
 - Entity and citizen selection adds a compact `Follow` action above that container. While
   following, the camera tracks the entity; manual pan, rotate, zoom, `Esc`, or starting a

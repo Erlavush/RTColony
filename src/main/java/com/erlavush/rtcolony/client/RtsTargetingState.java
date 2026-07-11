@@ -134,6 +134,29 @@ public final class RtsTargetingState {
         return selectedTarget;
     }
 
+    /** Uses the vanilla model-silhouette outline instead of an AABB overlay. */
+    public static boolean shouldRenderEntityOutline(Entity entity) {
+        if (!RtsModeState.isEnabled() || entity == null) {
+            return false;
+        }
+
+        if (selectedTarget != null
+                && selectedTarget.kind() == TargetKind.ENTITY
+                && selectedTarget.entity() == entity) {
+            return true;
+        }
+
+        return hoveredTarget != null
+                && hoveredTarget.kind() == TargetKind.ENTITY
+                && hoveredTarget.entity() == entity;
+    }
+
+    public static boolean isSelectedEntity(Entity entity) {
+        return selectedTarget != null
+                && selectedTarget.kind() == TargetKind.ENTITY
+                && selectedTarget.entity() == entity;
+    }
+
     private static HitResult raycastFromCursor(Minecraft minecraft) {
         Camera camera = minecraft.gameRenderer.getMainCamera();
         Vec3 origin = RtsCameraState.isTrueIsometric()

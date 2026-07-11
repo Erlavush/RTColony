@@ -189,12 +189,14 @@ public final class RTColonyClientEvents {
         PoseStack poseStack = event.getPoseStack();
 
         RtsTargetingState.TargetSnapshot selected = RtsTargetingState.getSelectedTarget();
-        if (selected != null) {
+        if (selected != null && selected.kind() != RtsTargetingState.TargetKind.ENTITY) {
             drawTargetOutline(poseStack, consumer, camera, selected, 0.2F, 0.95F, 1.0F, 1.0F);
         }
 
         RtsTargetingState.TargetSnapshot hovered = RtsTargetingState.getHoveredTarget();
-        if (hovered != null && !hovered.sameTarget(selected)) {
+        if (hovered != null
+                && hovered.kind() != RtsTargetingState.TargetKind.ENTITY
+                && !hovered.sameTarget(selected)) {
             drawTargetOutline(poseStack, consumer, camera, hovered, 1.0F, 0.9F, 0.25F, 1.0F);
         }
 
