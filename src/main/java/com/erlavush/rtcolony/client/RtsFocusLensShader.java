@@ -4,7 +4,10 @@ import com.erlavush.rtcolony.RTColony;
 import com.erlavush.rtcolony.mixin.GameRendererAccessor;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -13,10 +16,14 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
+import org.lwjgl.system.MemoryStack;
 
 import java.lang.reflect.Method;
+import java.nio.FloatBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,35 +44,105 @@ public final class RtsFocusLensShader {
 
     private static final float DEPTH_EPSILON = 0.000002F;
 
+    private static final int MAX_BLOCKERS =
+            RtsCutawayState.MAX_SHADER_BLOCKERS;
+
+    private static final float BLOCKER_RECT_PADDING_PIXELS =
+            2.0F;
+
+    private static final float BLOCKER_DEPTH_PADDING =
+            0.00005F;
+
     private static final String UNIFORMS = """
 
-            // RTColony target-aware, ground-safe clean cutaway uniforms.
+            // RTColony blocker-aware round cutaway uniforms.
+            #define RTCOLONY_MAX_BLOCKERS %d
+
             uniform float rtcolony_LensActive;
             uniform vec2 rtcolony_LensCenter;
             uniform vec2 rtcolony_LensRadius;
             uniform float rtcolony_LensTargetDepth;
-            uniform float rtcolony_LensFloorY;
 
-            """;
+            uniform int rtcolony_BlockerCount;
+            uniform vec4 rtcolony_BlockerRects[
+                    RTCOLONY_MAX_BLOCKERS
+            ];
+            uniform vec2 rtcolony_BlockerDepthRanges[
+                    RTCOLONY_MAX_BLOCKERS
+            ];
+
+            """.formatted(MAX_BLOCKERS);
 
     private static final String MAIN_PREFIX = """
 
                 if (rtcolony_LensActive > 0.5
-                        && gl_FragCoord.z < rtcolony_LensTargetDepth
-                        && gl_FragCoord.y >= rtcolony_LensFloorY) {
+                        && gl_FragCoord.z
+                        < rtcolony_LensTargetDepth) {
                     vec2 rtcolony_LensSafeRadius = max(
                             rtcolony_LensRadius,
                             vec2(1.0)
                     );
+
                     vec2 rtcolony_LensNormalized = (
-                            gl_FragCoord.xy - rtcolony_LensCenter
+                            gl_FragCoord.xy
+                            - rtcolony_LensCenter
                     ) / rtcolony_LensSafeRadius;
 
-                    if (dot(
+                    bool rtcolony_InsideLens = dot(
                             rtcolony_LensNormalized,
                             rtcolony_LensNormalized
-                    ) <= 1.0) {
-                        discard;
+                    ) <= 1.0;
+
+                    if (rtcolony_InsideLens) {
+                        bool rtcolony_IsApprovedBlocker =
+                                false;
+
+                        for (int rtcolony_Index = 0;
+                             rtcolony_Index
+                             < RTCOLONY_MAX_BLOCKERS;
+                             rtcolony_Index++) {
+                            if (rtcolony_Index
+                                    >= rtcolony_BlockerCount) {
+                                break;
+                            }
+
+                            vec4 rtcolony_Rect =
+                                    rtcolony_BlockerRects[
+                                            rtcolony_Index
+                                    ];
+
+                            vec2 rtcolony_DepthRange =
+                                    rtcolony_BlockerDepthRanges[
+                                            rtcolony_Index
+                                    ];
+
+                            bool rtcolony_InsideRect =
+                                    gl_FragCoord.x
+                                            >= rtcolony_Rect.x
+                                    && gl_FragCoord.y
+                                            >= rtcolony_Rect.y
+                                    && gl_FragCoord.x
+                                            <= rtcolony_Rect.z
+                                    && gl_FragCoord.y
+                                            <= rtcolony_Rect.w;
+
+                            bool rtcolony_InsideDepth =
+                                    gl_FragCoord.z
+                                            >= rtcolony_DepthRange.x
+                                    && gl_FragCoord.z
+                                            <= rtcolony_DepthRange.y;
+
+                            if (rtcolony_InsideRect
+                                    && rtcolony_InsideDepth) {
+                                rtcolony_IsApprovedBlocker =
+                                        true;
+                                break;
+                            }
+                        }
+
+                        if (rtcolony_IsApprovedBlocker) {
+                            discard;
+                        }
                     }
                 }
             """;
@@ -159,7 +236,7 @@ public final class RtsFocusLensShader {
         UniformLocations locations = UNIFORM_LOCATIONS.computeIfAbsent(
                 program,
                 UniformLocations::find
-            );
+        );
 
         if (locations.active() < 0) {
             return;
@@ -186,10 +263,46 @@ public final class RtsFocusLensShader {
                 locations.targetDepth(),
                 uniforms.targetDepth()
         );
-        upload1f(
-                locations.floorY(),
-                uniforms.floorY()
+
+        BlockerUniforms blockers = uniforms.blockers();
+        if (locations.blockerCount() < 0
+                || locations.blockerRects() < 0
+                || locations.blockerDepthRanges() < 0) {
+            GL20.glUniform1f(
+                    locations.active(),
+                    0.0F
+            );
+            return;
+        }
+
+        GL20.glUniform1i(
+                locations.blockerCount(),
+                blockers.count()
         );
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            FloatBuffer rectBuffer = stack.mallocFloat(
+                    blockers.rects().length
+            );
+            rectBuffer.put(blockers.rects()).flip();
+
+            GL20.glUniform4fv(
+                    locations.blockerRects(),
+                    rectBuffer
+            );
+
+            FloatBuffer depthBuffer = stack.mallocFloat(
+                    blockers.depthRanges().length
+            );
+            depthBuffer.put(
+                    blockers.depthRanges()
+            ).flip();
+
+            GL20.glUniform2fv(
+                    locations.blockerDepthRanges(),
+                    depthBuffer
+            );
+        }
     }
 
     private static LensUniforms createUniforms() {
@@ -287,14 +400,8 @@ public final class RtsFocusLensShader {
                 minimumRadiusX,
                 maximumRadiusX
         );
-
-        float bodySpanAboveFeet = Math.max(
-                1.0F,
-                projected.maxY() - projected.maxFeetY()
-        );
-
         float radiusY = Mth.clamp(
-                bodySpanAboveFeet * 0.72F + padding,
+                projected.height() * 0.5F + padding,
                 minimumRadiusY,
                 maximumRadiusY
         );
@@ -307,30 +414,35 @@ public final class RtsFocusLensShader {
             return null;
         }
 
-        float targetDepth = projected.upperBodyDepth() - DEPTH_EPSILON;
-
-        float floorMargin = Mth.clamp(
-                minimumDimension * 0.008F,
-                4.0F,
-                12.0F
-        );
-
-        float floorY = projected.maxFeetY() + floorMargin;
-
+        float targetDepth = projected.maxDepth() - DEPTH_EPSILON;
         if (!Float.isFinite(targetDepth)
                 || targetDepth <= 0.0F
-                || targetDepth >= 1.0F
-                || !Float.isFinite(floorY)) {
+                || targetDepth >= 1.0F) {
+            return null;
+        }
+
+        BlockerUniforms blockers =
+                buildBlockerUniforms(
+                        snapshot,
+                        minecraft.level,
+                        camera,
+                        inverseCameraRotation,
+                        projection,
+                        width,
+                        height
+                );
+
+        if (blockers == null) {
             return null;
         }
 
         return new LensUniforms(
                 projected.centerX(),
-                projected.cutawayCenterY(),
+                projected.centerY(),
                 radiusX,
                 radiusY,
                 targetDepth,
-                floorY
+                blockers
         );
     }
 
@@ -346,76 +458,12 @@ public final class RtsFocusLensShader {
             return null;
         }
 
-        Vec3 boundsCenter = bounds.getCenter();
-        double heightVal = Math.max(0.01D, bounds.getYsize());
-
-        ProjectedPoint upperBody = projectPoint(
-                new Vec3(
-                        boundsCenter.x,
-                        bounds.minY + heightVal * 0.62D,
-                        boundsCenter.z
-                ),
-                camera,
-                inverseCameraRotation,
-                projection,
-                width,
-                height
-        );
-
-        if (upperBody == null) {
-            return null;
-        }
-
-        ProjectedPoint[] feet = {
-                projectPoint(
-                        new Vec3(bounds.minX, bounds.minY, bounds.minZ),
-                        camera,
-                        inverseCameraRotation,
-                        projection,
-                        width,
-                        height
-                ),
-                projectPoint(
-                        new Vec3(bounds.minX, bounds.minY, bounds.maxZ),
-                        camera,
-                        inverseCameraRotation,
-                        projection,
-                        width,
-                        height
-                ),
-                projectPoint(
-                        new Vec3(bounds.maxX, bounds.minY, bounds.minZ),
-                        camera,
-                        inverseCameraRotation,
-                        projection,
-                        width,
-                        height
-                ),
-                projectPoint(
-                        new Vec3(bounds.maxX, bounds.minY, bounds.maxZ),
-                        camera,
-                        inverseCameraRotation,
-                        projection,
-                        width,
-                        height
-                )
-        };
-
-        float maxFeetY = Float.NEGATIVE_INFINITY;
-        for (ProjectedPoint foot : feet) {
-            if (foot != null) {
-                maxFeetY = Math.max(maxFeetY, foot.screenY());
-            }
-        }
-
-        if (!Float.isFinite(maxFeetY)) {
-            return null;
-        }
-
         float minX = Float.POSITIVE_INFINITY;
         float minY = Float.POSITIVE_INFINITY;
         float maxX = Float.NEGATIVE_INFINITY;
         float maxY = Float.NEGATIVE_INFINITY;
+        float minDepth = Float.POSITIVE_INFINITY;
+        float maxDepth = Float.NEGATIVE_INFINITY;
         int validPoints = 0;
 
         double[] xValues = {bounds.minX, bounds.maxX};
@@ -442,6 +490,8 @@ public final class RtsFocusLensShader {
                     minY = Math.min(minY, point.screenY());
                     maxX = Math.max(maxX, point.screenX());
                     maxY = Math.max(maxY, point.screenY());
+                    minDepth = Math.min(minDepth, point.depth());
+                    maxDepth = Math.max(maxDepth, point.depth());
                     validPoints++;
                 }
             }
@@ -451,7 +501,9 @@ public final class RtsFocusLensShader {
                 || !Float.isFinite(minX)
                 || !Float.isFinite(minY)
                 || !Float.isFinite(maxX)
-                || !Float.isFinite(maxY)) {
+                || !Float.isFinite(maxY)
+                || !Float.isFinite(minDepth)
+                || !Float.isFinite(maxDepth)) {
             return null;
         }
 
@@ -460,8 +512,8 @@ public final class RtsFocusLensShader {
                 minY,
                 maxX,
                 maxY,
-                upperBody.depth(),
-                maxFeetY
+                minDepth,
+                maxDepth
         );
     }
 
@@ -521,6 +573,113 @@ public final class RtsFocusLensShader {
                 viewSpace,
                 1.0F
         ).mul(projection);
+    }
+
+    private static BlockerUniforms buildBlockerUniforms(
+            RtsCutawayState.Snapshot snapshot,
+            ClientLevel level,
+            Camera camera,
+            Quaternionf inverseCameraRotation,
+            Matrix4f projection,
+            int width,
+            int height
+    ) {
+        List<Float> rectValues = new ArrayList<>();
+        List<Float> depthValues = new ArrayList<>();
+
+        int count = 0;
+
+        for (BlockPos pos : snapshot.blockerBlocks()) {
+            if (count >= MAX_BLOCKERS) {
+                return null;
+            }
+
+            BlockState state = level.getBlockState(pos);
+
+            if (state.isAir()) {
+                continue;
+            }
+
+            AABB bounds =
+                    RtsCutawayState.getVisualBlockBounds(
+                            level,
+                            pos,
+                            state
+                    ).inflate(0.015D);
+
+            ProjectedBounds projected = projectBounds(
+                    bounds,
+                    camera,
+                    inverseCameraRotation,
+                    projection,
+                    width,
+                    height
+            );
+
+            if (projected == null) {
+                continue;
+            }
+
+            float minX = projected.minX()
+                    - BLOCKER_RECT_PADDING_PIXELS;
+            float minY = projected.minY()
+                    - BLOCKER_RECT_PADDING_PIXELS;
+            float maxX = projected.maxX()
+                    + BLOCKER_RECT_PADDING_PIXELS;
+            float maxY = projected.maxY()
+                    + BLOCKER_RECT_PADDING_PIXELS;
+
+            if (maxX < 0.0F
+                    || minX > width
+                    || maxY < 0.0F
+                    || minY > height) {
+                continue;
+            }
+
+            rectValues.add(minX);
+            rectValues.add(minY);
+            rectValues.add(maxX);
+            rectValues.add(maxY);
+
+            depthValues.add(Math.max(
+                    0.0F,
+                    projected.minDepth()
+                    - BLOCKER_DEPTH_PADDING
+            ));
+
+            depthValues.add(Math.min(
+                    1.0F,
+                    projected.maxDepth()
+                    + BLOCKER_DEPTH_PADDING
+            ));
+
+            count++;
+        }
+
+        if (count == 0) {
+            return null;
+        }
+
+        float[] rects = new float[count * 4];
+        float[] depths = new float[count * 2];
+
+        for (int index = 0;
+             index < rects.length;
+             index++) {
+            rects[index] = rectValues.get(index);
+        }
+
+        for (int index = 0;
+             index < depths.length;
+             index++) {
+            depths[index] = depthValues.get(index);
+        }
+
+        return new BlockerUniforms(
+                count,
+                rects,
+                depths
+        );
     }
 
     private static float smoothStep(float value) {
@@ -590,7 +749,14 @@ public final class RtsFocusLensShader {
             float radiusX,
             float radiusY,
             float targetDepth,
-            float floorY
+            BlockerUniforms blockers
+    ) {
+    }
+
+    private record BlockerUniforms(
+            int count,
+            float[] rects,
+            float[] depthRanges
     ) {
     }
 
@@ -606,8 +772,8 @@ public final class RtsFocusLensShader {
             float minY,
             float maxX,
             float maxY,
-            float upperBodyDepth,
-            float maxFeetY
+            float minDepth,
+            float maxDepth
     ) {
         private float width() {
             return Math.max(0.0F, maxX - minX);
@@ -621,10 +787,8 @@ public final class RtsFocusLensShader {
             return (minX + maxX) * 0.5F;
         }
 
-        private float cutawayCenterY() {
-            float lower = maxFeetY;
-            float upper = maxY;
-            return lower + (upper - lower) * 0.58F;
+        private float centerY() {
+            return (minY + maxY) * 0.5F;
         }
     }
 
@@ -633,9 +797,13 @@ public final class RtsFocusLensShader {
             int center,
             int radius,
             int targetDepth,
-            int floorY
+            int blockerCount,
+            int blockerRects,
+            int blockerDepthRanges
     ) {
-        private static UniformLocations find(int program) {
+        private static UniformLocations find(
+                int program
+        ) {
             return new UniformLocations(
                     GL20.glGetUniformLocation(
                             program,
@@ -655,7 +823,15 @@ public final class RtsFocusLensShader {
                     ),
                     GL20.glGetUniformLocation(
                             program,
-                            "rtcolony_LensFloorY"
+                            "rtcolony_BlockerCount"
+                    ),
+                    GL20.glGetUniformLocation(
+                            program,
+                            "rtcolony_BlockerRects[0]"
+                    ),
+                    GL20.glGetUniformLocation(
+                            program,
+                            "rtcolony_BlockerDepthRanges[0]"
                     )
             );
         }

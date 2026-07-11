@@ -16,8 +16,13 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Determines whether the selected/followed entity is genuinely hidden by
@@ -42,6 +47,15 @@ public final class RtsCutawayState {
     private static final double SUPPORT_FACE_HEIGHT_MARGIN = 0.18D;
     private static final double SUPPORT_HIT_END_DISTANCE = 0.85D;
 
+    public static final int MAX_SHADER_BLOCKERS = 32;
+
+    private static final double MAX_BLOCKER_DISTANCE_TO_TARGET = 10.0D;
+    private static final double BLOCKER_CORRIDOR_STEP = 0.20D;
+    private static final double BLOCKER_CORRIDOR_START_OFFSET = 0.03D;
+    private static final double PROTECTED_GROUND_HEIGHT_MARGIN = 0.24D;
+
+    private static List<BlockPos> trackedBlockers = List.of();
+
     private static int trackedEntityId = -1;
     private static AABB trackedBounds;
     private static Vec3 trackedCenter;
@@ -51,6 +65,10 @@ public final class RtsCutawayState {
     private static boolean requestedOpen;
     private static float openAmount;
     private static Snapshot snapshot;
+
+    private static boolean wasRendering = false;
+    private static boolean lastRejectedCorridor = false;
+    private static boolean lastRejectedCount = false;
 
     private RtsCutawayState() {
     }
@@ -83,16 +101,19 @@ public final class RtsCutawayState {
             return;
         }
 
-        boolean obstructed = isTargetObstructed(
+        ObstructionResult obstruction = analyzeObstruction(
                 minecraft.level,
                 minecraft.player,
                 camera,
                 target.getBoundingBox()
         );
 
+        boolean obstructed = obstruction.obstructed();
+
         if (obstructed) {
             visibleTicks = 0;
             obstructedTicks++;
+            trackedBlockers = obstruction.blockers();
 
             if (obstructedTicks >= ACTIVATE_AFTER_TICKS) {
                 requestedOpen = true;
@@ -108,6 +129,14 @@ public final class RtsCutawayState {
 
         advanceAnimation();
         publishSnapshot();
+
+        boolean isRendering = isRendering();
+        if (isRendering && !wasRendering) {
+            com.erlavush.rtcolony.RTColony.LOGGER.info(
+                    "cutaway opened: entity=" + trackedEntityId + " blockers=" + trackedBlockers.size()
+            );
+        }
+        wasRendering = isRendering;
     }
 
     public static boolean isRendering() {
@@ -122,11 +151,15 @@ public final class RtsCutawayState {
         trackedEntityId = -1;
         trackedBounds = null;
         trackedCenter = null;
+        trackedBlockers = List.of();
         obstructedTicks = 0;
         visibleTicks = 0;
         requestedOpen = false;
         openAmount = 0.0F;
         snapshot = null;
+        wasRendering = false;
+        lastRejectedCorridor = false;
+        lastRejectedCount = false;
     }
 
     private static Entity resolveEligibleTarget(Minecraft minecraft) {
@@ -165,6 +198,7 @@ public final class RtsCutawayState {
         trackedEntityId = target.getId();
         trackedBounds = target.getBoundingBox();
         trackedCenter = trackedBounds.getCenter();
+        trackedBlockers = List.of();
 
         obstructedTicks = 0;
         visibleTicks = 0;
@@ -203,6 +237,7 @@ public final class RtsCutawayState {
                 trackedEntityId = -1;
                 trackedBounds = null;
                 trackedCenter = null;
+                trackedBlockers = List.of();
             }
         }
     }
@@ -211,6 +246,7 @@ public final class RtsCutawayState {
         if (trackedEntityId < 0
                 || trackedBounds == null
                 || trackedCenter == null
+                || trackedBlockers.isEmpty()
                 || openAmount <= 0.001F) {
             snapshot = null;
             return;
@@ -220,21 +256,26 @@ public final class RtsCutawayState {
                 trackedEntityId,
                 trackedBounds,
                 trackedCenter,
-                openAmount
+                openAmount,
+                trackedBlockers
         );
     }
 
-    private static boolean isTargetObstructed(
+    private static ObstructionResult analyzeObstruction(
             ClientLevel level,
             LocalPlayer player,
             Camera camera,
             AABB targetBounds
     ) {
-        if (level == null || player == null || targetBounds == null) {
-            return false;
+        if (level == null
+                || player == null
+                || targetBounds == null) {
+            return ObstructionResult.visible();
         }
 
         List<Vec3> samples = createTargetSamples(camera, targetBounds);
+        Set<BlockPos> blockers = new LinkedHashSet<>();
+
         int blockedSamples = 0;
         boolean centerBlocked = false;
 
@@ -242,24 +283,76 @@ public final class RtsCutawayState {
             Vec3 sample = samples.get(index);
             Vec3 rayStart = rayStartForSample(camera, sample);
 
-            if (isSampleBlocked(
+            SampleTrace trace = traceSampleBlockers(
                     level,
                     player,
                     rayStart,
                     sample,
                     targetBounds
-            )) {
-                blockedSamples++;
+            );
 
-                if (index == 0) {
-                    centerBlocked = true;
+            if (!trace.eligible()) {
+                if (!lastRejectedCorridor) {
+                    com.erlavush.rtcolony.RTColony.LOGGER.info("cutaway rejected: blocker corridor too distant");
+                    lastRejectedCorridor = true;
                 }
+                lastRejectedCount = false;
+                return ObstructionResult.visible();
+            }
+
+            if (!trace.blocked()) {
+                continue;
+            }
+
+            blockedSamples++;
+
+            if (index == 0) {
+                centerBlocked = true;
+            }
+
+            blockers.addAll(trace.blockers());
+
+            if (blockers.size() > MAX_SHADER_BLOCKERS) {
+                if (!lastRejectedCount) {
+                    com.erlavush.rtcolony.RTColony.LOGGER.info("cutaway rejected: blocker count exceeded");
+                    lastRejectedCount = true;
+                }
+                lastRejectedCorridor = false;
+                return ObstructionResult.visible();
             }
         }
 
-        // The body center must be obstructed, and enough surrounding samples
-        // must also be blocked to avoid activating for tiny edge overlaps.
-        return centerBlocked && blockedSamples >= REQUIRED_BLOCKED_SAMPLES;
+        if (!centerBlocked
+                || blockedSamples < REQUIRED_BLOCKED_SAMPLES
+                || blockers.isEmpty()) {
+            return ObstructionResult.visible();
+        }
+
+        Vec3 targetCenter = targetBounds.getCenter();
+        List<BlockPos> sorted = new ArrayList<>(blockers);
+
+        sorted.sort(Comparator.comparingDouble(
+                pos -> Vec3.atCenterOf(pos)
+                        .distanceToSqr(targetCenter)
+        ));
+
+        if (sorted.size() > MAX_SHADER_BLOCKERS) {
+            if (!lastRejectedCount) {
+                com.erlavush.rtcolony.RTColony.LOGGER.info("cutaway rejected: blocker count exceeded");
+                lastRejectedCount = true;
+            }
+            lastRejectedCorridor = false;
+            return ObstructionResult.visible();
+        }
+
+        // Reset rejection flags since obstruction succeeded
+        lastRejectedCorridor = false;
+        lastRejectedCount = false;
+
+        return new ObstructionResult(
+                true,
+                List.copyOf(sorted)
+        );
     }
 
     private static List<Vec3> createTargetSamples(Camera camera, AABB bounds) {
@@ -325,7 +418,7 @@ public final class RtsCutawayState {
         return sample.subtract(look.scale(depthFromCameraPlane));
     }
 
-    private static boolean isSampleBlocked(
+    private static SampleTrace traceSampleBlockers(
             ClientLevel level,
             LocalPlayer player,
             Vec3 start,
@@ -336,7 +429,7 @@ public final class RtsCutawayState {
         double totalDistance = delta.length();
 
         if (totalDistance <= SAMPLE_END_MARGIN) {
-            return false;
+            return SampleTrace.visible();
         }
 
         Vec3 direction = delta.scale(1.0D / totalDistance);
@@ -352,20 +445,21 @@ public final class RtsCutawayState {
             ));
 
             if (hit.getType() != HitResult.Type.BLOCK) {
-                return false;
+                return SampleTrace.visible();
             }
 
             Vec3 hitLocation = hit.getLocation();
-            double distanceFromStart = start.distanceTo(hitLocation);
+            double distanceFromStart =
+                    start.distanceTo(hitLocation);
 
-            // A hit almost at the entity sample is usually the floor or block
-            // touching the entity, not a foreground obstruction.
-            if (distanceFromStart >= totalDistance - SAMPLE_END_MARGIN) {
-                return false;
+            if (distanceFromStart
+                    >= totalDistance - SAMPLE_END_MARGIN) {
+                return SampleTrace.visible();
             }
 
             BlockPos blockPos = hit.getBlockPos();
-            BlockState blockState = level.getBlockState(blockPos);
+            BlockState blockState =
+                    level.getBlockState(blockPos);
 
             if (isTargetSupportSurface(
                     hit,
@@ -373,47 +467,188 @@ public final class RtsCutawayState {
                     end,
                     targetBounds
             )) {
-                return false;
+                return SampleTrace.visible();
             }
 
-            if (isVisualBlocker(level, blockPos, blockState)) {
-                return true;
+            if (isVisualBlocker(
+                    level,
+                    blockPos,
+                    blockState
+            )) {
+                double blockerDistanceToTarget =
+                        hitLocation.distanceTo(end);
+
+                if (blockerDistanceToTarget
+                        > MAX_BLOCKER_DISTANCE_TO_TARGET) {
+                    return SampleTrace.ineligible();
+                }
+
+                return collectBlockerCorridor(
+                        level,
+                        hitLocation,
+                        end,
+                        direction,
+                        targetBounds
+                );
             }
 
-            Vec3 nextCursor = hitLocation.add(direction.scale(PASSTHROUGH_STEP));
-            if (nextCursor.distanceToSqr(cursor) < 1.0E-8D) {
-                return false;
+            Vec3 nextCursor = hitLocation.add(
+                    direction.scale(PASSTHROUGH_STEP)
+            );
+
+            if (nextCursor.distanceToSqr(cursor)
+                    < 1.0E-8D) {
+                return SampleTrace.visible();
             }
 
             cursor = nextCursor;
 
-            if (start.distanceTo(cursor) >= totalDistance - SAMPLE_END_MARGIN) {
-                return false;
+            if (start.distanceTo(cursor)
+                    >= totalDistance - SAMPLE_END_MARGIN) {
+                return SampleTrace.visible();
             }
         }
 
-        return false;
+        return SampleTrace.visible();
     }
 
-    private static boolean isTargetSupportSurface(
-            BlockHitResult hit,
-            Vec3 hitLocation,
+    private static SampleTrace collectBlockerCorridor(
+            ClientLevel level,
+            Vec3 firstHit,
             Vec3 targetSample,
+            Vec3 direction,
             AABB targetBounds
     ) {
-        if (hit.getDirection() != Direction.UP) {
-            return false;
+        double corridorLength =
+                firstHit.distanceTo(targetSample);
+
+        if (corridorLength
+                > MAX_BLOCKER_DISTANCE_TO_TARGET) {
+            return SampleTrace.ineligible();
         }
 
-        double protectedFloorY =
-                targetBounds.minY + SUPPORT_FACE_HEIGHT_MARGIN;
+        Set<BlockPos> blockers = new LinkedHashSet<>();
 
-        if (hitLocation.y > protectedFloorY) {
-            return false;
+        for (double distance =
+                     BLOCKER_CORRIDOR_START_OFFSET;
+             distance <
+                     corridorLength - SAMPLE_END_MARGIN;
+             distance += BLOCKER_CORRIDOR_STEP) {
+
+            Vec3 point = firstHit.add(
+                    direction.scale(distance)
+            );
+
+            BlockPos pos = BlockPos.containing(
+                    point.x,
+                    point.y,
+                    point.z
+                ).immutable();
+
+            if (blockers.contains(pos)) {
+                continue;
+            }
+
+            BlockState state = level.getBlockState(pos);
+
+            if (!isVisualBlocker(level, pos, state)) {
+                continue;
+            }
+
+            if (isProtectedGroundBlock(
+                    level,
+                    pos,
+                    state,
+                    targetBounds
+            )) {
+                continue;
+            }
+
+            blockers.add(pos);
+
+            if (blockers.size() > MAX_SHADER_BLOCKERS) {
+                return SampleTrace.ineligible();
+            }
         }
 
-        return hitLocation.distanceTo(targetSample)
-                <= SUPPORT_HIT_END_DISTANCE;
+        BlockPos firstPos = BlockPos.containing(
+                firstHit.x,
+                firstHit.y,
+                firstHit.z
+        ).immutable();
+
+        BlockState firstState =
+                level.getBlockState(firstPos);
+
+        if (isVisualBlocker(level, firstPos, firstState)
+                && !isProtectedGroundBlock(
+                        level,
+                        firstPos,
+                        firstState,
+                        targetBounds
+                )) {
+            blockers.add(firstPos);
+        }
+
+        if (blockers.isEmpty()) {
+            return SampleTrace.visible();
+        }
+
+        if (blockers.size() > MAX_SHADER_BLOCKERS) {
+            return SampleTrace.ineligible();
+        }
+
+        return new SampleTrace(
+                true,
+                true,
+                List.copyOf(blockers)
+        );
+    }
+
+    private static boolean isProtectedGroundBlock(
+            ClientLevel level,
+            BlockPos pos,
+            BlockState state,
+            AABB targetBounds
+    ) {
+        AABB visualBounds = getVisualBlockBounds(
+                level,
+                pos,
+                state
+        );
+
+        return visualBounds.maxY
+                <= targetBounds.minY
+                + PROTECTED_GROUND_HEIGHT_MARGIN;
+    }
+
+    static AABB getVisualBlockBounds(
+            ClientLevel level,
+            BlockPos pos,
+            BlockState state
+    ) {
+        if (state.is(BlockTags.LEAVES)) {
+            return new AABB(pos);
+        }
+
+        VoxelShape shape =
+                state.getOcclusionShape(level, pos);
+
+        if (shape.isEmpty()) {
+            shape = state.getCollisionShape(level, pos);
+        }
+
+        if (shape.isEmpty()) {
+            return new AABB(pos);
+        }
+
+        AABB local = shape.bounds();
+
+        return local.move(
+                pos.getX(),
+                pos.getY(),
+                pos.getZ()
+        );
     }
 
     private static boolean isVisualBlocker(
@@ -437,11 +672,67 @@ public final class RtsCutawayState {
                 || !blockState.getOcclusionShape(level, blockPos).isEmpty();
     }
 
+    private static boolean isTargetSupportSurface(
+            BlockHitResult hit,
+            Vec3 hitLocation,
+            Vec3 targetSample,
+            AABB targetBounds
+    ) {
+        if (hit.getDirection() != Direction.UP) {
+            return false;
+        }
+
+        double protectedFloorY =
+                targetBounds.minY + SUPPORT_FACE_HEIGHT_MARGIN;
+
+        if (hitLocation.y > protectedFloorY) {
+            return false;
+        }
+
+        return hitLocation.distanceTo(targetSample)
+                <= SUPPORT_HIT_END_DISTANCE;
+    }
+
+    private record SampleTrace(
+            boolean blocked,
+            boolean eligible,
+            List<BlockPos> blockers
+    ) {
+        private static SampleTrace visible() {
+            return new SampleTrace(
+                    false,
+                    true,
+                    List.of()
+            );
+        }
+
+        private static SampleTrace ineligible() {
+            return new SampleTrace(
+                    false,
+                    false,
+                    List.of()
+            );
+        }
+    }
+
+    private record ObstructionResult(
+            boolean obstructed,
+            List<BlockPos> blockers
+    ) {
+        private static ObstructionResult visible() {
+            return new ObstructionResult(
+                    false,
+                    List.of()
+            );
+        }
+    }
+
     public record Snapshot(
             int entityId,
             AABB targetBounds,
             Vec3 targetCenter,
-            float openAmount
+            float openAmount,
+            List<BlockPos> blockerBlocks
     ) {
     }
 }
