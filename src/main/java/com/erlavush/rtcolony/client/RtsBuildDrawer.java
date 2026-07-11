@@ -255,7 +255,9 @@ public final class RtsBuildDrawer {
                 }
                 return true;
             }
-            return button == GLFW.GLFW_MOUSE_BUTTON_RIGHT;
+            // Let vanilla update MouseHandler.isRightPressed so onMove can
+            // drive the locked-placement orbit until the button is released.
+            return false;
         }
 
         if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && previewActive) {

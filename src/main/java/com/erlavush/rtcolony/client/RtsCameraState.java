@@ -247,11 +247,6 @@ public final class RtsCameraState {
             boolean invertHorizontal,
             boolean invertVertical
     ) {
-        if (isTrueIsometric()) {
-            rotateIsometricFromScreenDrag(deltaX);
-            return;
-        }
-
         if (!active || deltaX == 0.0D && deltaY == 0.0D) {
             return;
         }

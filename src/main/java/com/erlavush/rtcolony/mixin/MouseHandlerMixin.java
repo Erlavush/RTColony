@@ -99,6 +99,7 @@ public abstract class MouseHandlerMixin {
                 || window != this.minecraft.getWindow().getWindow()
                 || this.minecraft.screen != null
                 || button != GLFW.GLFW_MOUSE_BUTTON_RIGHT
+                || RtsBuildDrawer.isPreviewActive()
                 || action != GLFW.GLFW_PRESS) {
             return;
         }

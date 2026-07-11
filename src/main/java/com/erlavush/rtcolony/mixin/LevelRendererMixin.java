@@ -2,8 +2,10 @@ package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RtsCameraState;
 import com.erlavush.rtcolony.client.RtsModeState;
+import com.erlavush.rtcolony.client.RtsIsometricWeatherRenderer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.SectionOcclusionGraph;
 import net.minecraft.client.renderer.culling.Frustum;
 import org.spongepowered.asm.mixin.Final;
@@ -34,5 +36,19 @@ public abstract class LevelRendererMixin {
             this.sectionOcclusionGraph.invalidate();
         }
         this.rtcolony$wasTrueIsometric = trueIsometric;
+    }
+
+    @Inject(method = "renderSnowAndRain", at = @At("HEAD"), cancellable = true)
+    private void rtcolony$renderWeatherAcrossIsometricViewport(
+            LightTexture lightTexture,
+            float partialTick,
+            double camX,
+            double camY,
+            double camZ,
+            CallbackInfo ci
+    ) {
+        if (RtsIsometricWeatherRenderer.render(lightTexture, partialTick, camX, camY, camZ)) {
+            ci.cancel();
+        }
     }
 }

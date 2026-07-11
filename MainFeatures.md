@@ -22,6 +22,8 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
   immediately, with no vertical transition animation.
 - True Isometric uses an orthographic, fixed-angle RTS projection with no perspective depth
   or terrain-height bobbing.
+- Rain and snow cover the complete True Isometric viewport at every zoom level instead of
+  exposing vanilla's fixed precipitation circle.
 - Mouse wheel zooms through a closer range in both RTS camera modes.
 - Edge panning moves the camera when enabled.
 - Edge panning speed is configurable with a slider.
@@ -79,12 +81,12 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 ## Locked Placement
 
+- Right-click drag uses a free spherical yaw/pitch orbit around the preview center in both
+  RTS camera modes; releasing right-click ends the orbit.
 - The preview stops following the cursor.
 - The camera locks to the preview building center.
 - Left click is consumed except for RTColony placement UI buttons.
-- RTS Perspective right mouse drag orbits around the building center.
-- True Isometric stays orthographic during locked placement; right mouse drag rotates in
-  discrete 90-degree quarter turns around the preview.
+- True Isometric remains orthographic while using the free placement orbit.
 - Vertical orbit is floor-clamped.
 - Scroll zooms around the building.
 - `W/A/S/D` move the preview relative to the current camera direction.

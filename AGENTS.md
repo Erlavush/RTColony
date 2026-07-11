@@ -76,7 +76,11 @@ MineColonies and Create integration.
   reports classes were reloaded. If the game says classes are up to date or behavior does
   not change, restart the client.
 - The user is testing in IntelliJ with the NeoForge client run config.
-- Before committing user-approved gameplay changes, run `./gradlew build`.
+- Run `./gradlew build` before handing gameplay changes back to the user.
+- Do not launch the client solely to capture screenshots or perform agent-led visual
+  judgment. The user owns in-game visual testing and will report what they observe.
+  Use screenshots supplied by the user as evidence; only launch the client when the
+  user explicitly requests it or when a non-visual runtime check is genuinely required.
 
 ## Agent Alignment Rule
 
@@ -121,31 +125,14 @@ MineColonies and Create integration.
 - Use the Prism-derived Java 21 JDK for Gradle and IDE project SDK.
 - Keep third-party reference clones under ignored `references/`.
 
-## Commit and Push Rule
+## Git Ownership Rule
 
-- Commit and push at stable checkpoints instead of after every small tweak.
-- Batch small follow-up tweaks that belong to the same feature thread into one commit
-  unless the user explicitly asks for an immediate commit/push.
-- Commit and push when the user explicitly asks, when a stable milestone is complete,
-  when the user accepts a feature, or before starting unrelated work.
-- Do not commit or push when the user explicitly says to skip, pause, avoid, or not do
-  the commit/push.
-- Do not leave stable accepted work only in the working tree unless the user explicitly
-  asks not to commit or push.
-- When committing a feature that changes the mod's current behavior, also update
-  `MainFeatures.md` with the short, accurate feature flow. Remove outdated or unnecessary
-  details from that file.
-- Commit messages must be short, real, and specific to the completed change. Do not use
-  a generic message when the change has a clear feature, fix, or docs scope.
-- When committing, use this command sequence and stage only the intended files if
-  unrelated local files are present:
-
-```bash
-git status --short
-git add <intended files>
-git commit -m "<type>: <short accurate change summary>"
-git push
-```
+- Never stage, commit, push, create a pull request, or otherwise publish RTColony changes
+  unless the user explicitly asks for that exact Git action in the current request.
+- Leave completed changes in the working tree for the user to review, commit, and push.
+- Reading Git status, history, and diffs is allowed for diagnosis and verification.
+- Keep `MainFeatures.md` accurate when player-facing behavior changes, regardless of who
+  later commits the work.
 
 ## Planned Milestones
 
