@@ -1,5 +1,6 @@
 package com.erlavush.rtcolony.mixin;
 
+import com.erlavush.rtcolony.client.RTColonyClientEvents;
 import com.erlavush.rtcolony.client.RtsBuildDrawer;
 import com.erlavush.rtcolony.client.RtsModeState;
 import com.erlavush.rtcolony.client.RtsTargetingState;
@@ -20,6 +21,7 @@ public abstract class KeyboardHandlerMixin {
                 && action == GLFW.GLFW_PRESS
                 && key == GLFW.GLFW_KEY_F5
                 && minecraft.screen == null) {
+            RTColonyClientEvents.suppressAutoEnableForCurrentWorld();
             RtsModeState.setEnabled(false);
             ci.cancel();
             return;
@@ -44,7 +46,7 @@ public abstract class KeyboardHandlerMixin {
             return;
         }
 
-        if (key == GLFW.GLFW_KEY_R && RtsBuildDrawer.rotatePreview()) {
+        if (pressed && key == GLFW.GLFW_KEY_R && RtsBuildDrawer.rotatePreview()) {
             ci.cancel();
             return;
         }
@@ -61,7 +63,7 @@ public abstract class KeyboardHandlerMixin {
             return;
         }
 
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (pressed && key == GLFW.GLFW_KEY_ESCAPE) {
             if (RtsBuildDrawer.cancelPreview() || RtsTargetingState.stopFollowing()) {
                 ci.cancel();
             }
@@ -82,17 +84,17 @@ public abstract class KeyboardHandlerMixin {
             return RtsBuildDrawer.moveLockedPreviewRelativeToCamera(-1, 0);
         }
         if (key == GLFW.GLFW_KEY_Q) {
-            return RtsBuildDrawer.rotatePreviewLeft();
+            return !pressed || RtsBuildDrawer.rotatePreviewLeft();
         }
         if (key == GLFW.GLFW_KEY_R) {
-            return RtsBuildDrawer.rotatePreview();
+            return !pressed || RtsBuildDrawer.rotatePreview();
         }
         if (key == GLFW.GLFW_KEY_F) {
-            return RtsBuildDrawer.mirrorPreview();
+            return !pressed || RtsBuildDrawer.mirrorPreview();
         }
-        if (pressed && (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER)) {
-            return RtsBuildDrawer.confirmPreview(minecraft);
+        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+            return !pressed || RtsBuildDrawer.confirmPreview(minecraft);
         }
-        return pressed && key == GLFW.GLFW_KEY_ESCAPE && RtsBuildDrawer.cancelPreview();
+        return key == GLFW.GLFW_KEY_ESCAPE && (!pressed || RtsBuildDrawer.cancelPreview());
     }
 }

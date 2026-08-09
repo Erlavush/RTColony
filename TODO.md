@@ -15,17 +15,13 @@ implement a feature without the alignment questions and an approved design requi
 
 ## Priority 1: Camera Comfort and View Modes
 
-- Reduce motion sickness from current terrain-following camera movement.
-- Add selectable RTS camera modes:
-  - Stabilized perspective: terrain follow is reduced/clamped or optional.
-  - Free perspective: preserve current RTS behavior.
-  - True isometric: orthographic, fixed-angle RTS view based on the Reign of Nether
-    reference implementation.
-- Expose terrain-follow strength, smoothing, fixed-height behavior, movement speed, and
-  camera mode in client config/keybindings.
-- Keep input, cursor raycasting, zoom, selection, and placement accurate in every mode.
-- Design detail still needed: decide whether true isometric is strictly orthographic or
-  retains any perspective; do not implement until approved.
+- [x] Add stabilized overhead perspective with optional smooth terrain-height changes.
+- [x] Add a strictly orthographic, fixed-angle True Isometric mode based on the Reign of
+  Nether reference direction.
+- [x] Keep input, cursor raycasting, zoom, selection, weather, and placement accurate in
+  both camera modes.
+- [ ] Expose terrain-follow strength, fixed-height behavior, and movement speed only after
+  their UX and safe ranges are aligned.
 
 ## Priority 2: Smart Selection and Camera Follow (Implemented)
 
@@ -62,7 +58,7 @@ implement a feature without the alignment questions and an approved design requi
 - Building cards should show purpose, footprint, worker capacity, prerequisites, level,
   material summary, and cached Structurize schematic thumbnails.
 - Cache previews locally; invalidate on resource/structure-pack changes.
-- Add a Roblox-tycoon-style dotted/grid footprint overlay in preview mode:
+- [x] Add a Roblox-tycoon-style dotted/grid footprint overlay in preview mode:
   green valid ground, red blocked area, clear origin/facing marker, and visible rotation.
 - Start snapping with predictable block-grid/footprint behavior. Consider road, shoreline,
   and building alignment snapping only later.

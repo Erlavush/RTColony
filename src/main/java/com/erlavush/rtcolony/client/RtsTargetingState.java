@@ -91,6 +91,7 @@ public final class RtsTargetingState {
     }
 
     static boolean tickFollow(Minecraft minecraft) {
+        validateSelectedEntity(minecraft);
         Entity entity = getFollowedEntity(minecraft);
         if (entity == null || !entity.isAlive() || entity.isRemoved()) {
             followedEntityId = -1;
@@ -99,6 +100,31 @@ public final class RtsTargetingState {
 
         RtsCameraState.focusOn(entity.getBoundingBox().getCenter());
         return true;
+    }
+
+    private static void validateSelectedEntity(Minecraft minecraft) {
+        if (selectedTarget == null || selectedTarget.kind() != TargetKind.ENTITY) {
+            return;
+        }
+
+        Entity entity = selectedTarget.entity();
+        boolean unavailable = minecraft == null
+                || minecraft.level == null
+                || entity == null
+                || entity.isRemoved()
+                || !entity.isAlive()
+                || minecraft.level.getEntity(entity.getId()) != entity;
+        if (!unavailable) {
+            return;
+        }
+
+        if (hoveredTarget != null && hoveredTarget.entity() == entity) {
+            hoveredTarget = null;
+            hoverHit = null;
+        }
+        selectedTarget = null;
+        followedEntityId = -1;
+        RtsCutawayState.clear();
     }
 
     public static boolean stopFollowing() {

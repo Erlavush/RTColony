@@ -8,21 +8,28 @@ MineColonies and Create integration.
 
 ## Current Status
 
-- Project directory: `/home/eru/RTColony`
+- Project directory: `/home/eru/Projects/RTColony`
 - Mod name: `RTColony`
 - License: `GPL-3.0-only`
-- NeoForge scaffold exists once `./gradlew build` passes.
-- Java 21 JDK is reused from Prism Launcher and copied to:
+- NeoForge scaffold and reproducible Maven dependencies are configured.
+- Java 21 is Temurin 21.0.12+8, installed user-locally at:
   `/home/eru/.local/opt/jdks/minecraft-java-21`
 - Convenience commands:
   - `/home/eru/.local/bin/java21`
   - `/home/eru/.local/bin/javac21`
+- IntelliJ IDEA 2026.2.0.1 is installed user-locally at:
+  `/home/eru/.local/opt/idea`
+- IntelliJ convenience command: `/home/eru/.local/bin/idea`
+- Minecraft's optional narrator uses user-local Flite 2.2 at:
+  `/home/eru/.local/opt/flite`
+- Flite convenience command: `/home/eru/.local/bin/flite`
 - Current branch: `main`
 - Current verification command: `./gradlew build`
 
 ## Current Implemented State
 
-- RTS mode auto-enables on world load and can be toggled with `F4`.
+- RTS mode auto-enables once per joined world. `F4` enters/cycles RTS camera modes, and
+  `F5` exits to vanilla view for the remainder of the current world.
 - `Ctrl+B` opens the RTColony build drawer while RTS mode is active.
 - The build drawer currently supports MineColonies starter supplies:
   - Supply Camp
@@ -60,6 +67,7 @@ MineColonies and Create integration.
   - current options:
     - edge panning enabled.
     - edge panning speed slider.
+    - smooth terrain-height changes.
     - invert locked placement horizontal orbit.
     - invert locked placement vertical orbit.
 - Drawer visual tuning config still exists separately:
@@ -180,11 +188,11 @@ workflow and the existing alignment rule without inferring a role from the reque
 - Copy or closely port reference code/assets when licenses allow it, then adapt only what
   is necessary for NeoForge 1.21.1 and RTColony's package/API boundaries.
 - Keep copied/adapted third-party material attributed in `THIRD_PARTY_NOTICES.md`.
-- Start with a small NeoForge 1.21.1 client-side prototype before adding MineColonies or
-  Create dependencies.
+- Keep MineColonies/Structurize/Jade/Sodium versions pinned in Gradle and avoid local
+  `run/mods` compile dependencies.
 - Prefer Gradle wrapper tasks from the project once the NeoForge scaffold exists.
-- Use IntelliJ IDEA Community for Java editing/debugging.
-- Use the Prism-derived Java 21 JDK for Gradle and IDE project SDK.
+- Use IntelliJ IDEA's free core Java feature set for editing/debugging.
+- Use the user-local Temurin Java 21 JDK for Gradle and the IDE project SDK.
 - Keep third-party reference clones under ignored `references/`.
 
 ## Git Ownership Rule

@@ -6,7 +6,8 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 ## RTS Mode
 
-- RTS mode auto-enables on world load.
+- RTS mode auto-enables once for each joined world. Exiting it manually keeps vanilla view
+  active for that world until `F4` is pressed or a different world is joined.
 - `F4` cycles between RTS Perspective and True Isometric. From vanilla view, it returns to
   the last RTS camera mode.
 - `F5` exits RTS mode to vanilla Minecraft view. Once outside RTS mode, vanilla `F5`

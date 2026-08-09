@@ -51,6 +51,9 @@ MineColonies is intended as the source of truth for colony concepts, citizens,
 buildings, requests, work status, and colony UI/data patterns when RTColony begins
 MineColonies integration.
 
+The development runtime resolves MineColonies from its official LDTTeam Maven repository
+at `com.ldtteam:minecolonies:1.1.1319-1.21.1-snapshot`.
+
 RTColony includes MineColonies builder-hut GUI textures copied under the `rtcolony`
 namespace for the RTS build drawer:
 
@@ -58,8 +61,9 @@ namespace for the RTS build drawer:
 
 ## Structurize
 
+- Repository: `https://github.com/ldtteam/Structurize`
 - Local reference: `references/structurize`
-- Source jar: `run/mods/structurize-1.0.831-1.21.1-snapshot.jar`
+- Development artifact: `com.ldtteam:structurize:1.0.832-1.21.1-snapshot`
 - License declared by jar metadata: GPL 3.0
 - Copyright: Structurize contributors / LDTTeam
 

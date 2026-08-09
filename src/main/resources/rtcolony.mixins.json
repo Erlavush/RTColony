@@ -15,7 +15,6 @@
     "SectionOcclusionGraphMixin",
     "SodiumDefaultChunkRendererMixin",
     "SodiumBlockRendererMixin",
-    "SodiumRenderRegionMixin",
     "SodiumRenderSectionManagerMixin"
   ],
   "injectors": {

@@ -117,6 +117,10 @@ public final class RtsSodiumCutaway {
             return false;
         }
 
+        if (state.getBlock() instanceof DoorBlock || state.getBlock() instanceof LadderBlock) {
+            return false;
+        }
+
         long packed = pos.asLong();
         if (snapshot.blockers().contains(packed)) {
             return true;
@@ -125,10 +129,6 @@ public final class RtsSodiumCutaway {
         Integer floodCeiling = snapshot.floodCeilings().get(packXZ(pos.getX(), pos.getZ()));
         if (floodCeiling != null && pos.getY() > floodCeiling) {
             return true;
-        }
-
-        if (state.getBlock() instanceof DoorBlock || state.getBlock() instanceof LadderBlock) {
-            return false;
         }
 
         return insideCameraCone(pos, snapshot);
@@ -215,7 +215,8 @@ public final class RtsSodiumCutaway {
         }
         int dx = pos.getX() - originX;
         int dz = pos.getZ() - originZ;
-        if (dx * dx + dz * dz > radiusSquared || !level.hasChunkAt(pos)) {
+        if (dx * dx + dz * dz > radiusSquared
+                || !level.getChunkSource().hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
             return;
         }
         long packed = pos.asLong();

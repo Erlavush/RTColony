@@ -20,6 +20,9 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Orthographic weather renderer based on vanilla LevelRenderer weather.
  *
@@ -92,19 +95,23 @@ public final class RtsIsometricWeatherRenderer {
         RenderSystem.depthMask(Minecraft.useShaderTransparency());
         RenderSystem.setShader(GameRenderer::getParticleShader);
 
-        renderPrecipitationType(
+        PrecipitationColumns columns = collectPrecipitationColumns(
                 minecraft,
-                partialTick,
-                camX,
-                camY,
-                camZ,
                 minX,
                 maxX,
                 minZ,
                 maxZ,
                 lowerY,
                 upperY,
-                step,
+                step
+        );
+        renderPrecipitationType(
+                minecraft,
+                partialTick,
+                camX,
+                camY,
+                camZ,
+                columns.rain(),
                 ticks,
                 rainLevel,
                 Biome.Precipitation.RAIN,
@@ -116,13 +123,7 @@ public final class RtsIsometricWeatherRenderer {
                 camX,
                 camY,
                 camZ,
-                minX,
-                maxX,
-                minZ,
-                maxZ,
-                lowerY,
-                upperY,
-                step,
+                columns.snow(),
                 ticks,
                 rainLevel,
                 Biome.Precipitation.SNOW,
@@ -141,13 +142,7 @@ public final class RtsIsometricWeatherRenderer {
             double camX,
             double camY,
             double camZ,
-            int minX,
-            int maxX,
-            int minZ,
-            int maxZ,
-            int lowerY,
-            int upperY,
-            int step,
+            List<PrecipitationColumn> columns,
             long ticks,
             float rainLevel,
             Biome.Precipitation requestedType,
@@ -155,13 +150,56 @@ public final class RtsIsometricWeatherRenderer {
     ) {
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder builder = null;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
         Vector3f left = minecraft.gameRenderer.getMainCamera().getLeftVector();
         double widthX = -left.x() * HALF_STREAK_WIDTH;
         double widthZ = -left.z() * HALF_STREAK_WIDTH;
 
+        for (PrecipitationColumn column : columns) {
+            if (builder == null) {
+                RenderSystem.setShaderTexture(0, texture);
+                builder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+            }
+
+            float speed = requestedType == Biome.Precipitation.RAIN ? column.rainSpeed() : 0.25F;
+            float vOffset = -((float) (ticks & 131071L) + partialTick) / 32.0F * speed;
+            float alpha = rainLevel * (requestedType == Biome.Precipitation.RAIN ? 0.78F : 0.68F);
+            double baseX = column.x() + 0.5D - camX;
+            double baseZ = column.z() + 0.5D - camZ;
+            float bottomV = column.bottomY() * 0.25F + vOffset;
+            float topV = column.topY() * 0.25F + vOffset;
+
+            builder.addVertex((float) (baseX - widthX), (float) (column.topY() - camY), (float) (baseZ - widthZ))
+                    .setUv(0.0F, bottomV).setColor(1.0F, 1.0F, 1.0F, alpha).setLight(column.light());
+            builder.addVertex((float) (baseX + widthX), (float) (column.topY() - camY), (float) (baseZ + widthZ))
+                    .setUv(1.0F, bottomV).setColor(1.0F, 1.0F, 1.0F, alpha).setLight(column.light());
+            builder.addVertex((float) (baseX + widthX), (float) (column.bottomY() - camY), (float) (baseZ + widthZ))
+                    .setUv(1.0F, topV).setColor(1.0F, 1.0F, 1.0F, alpha).setLight(column.light());
+            builder.addVertex((float) (baseX - widthX), (float) (column.bottomY() - camY), (float) (baseZ - widthZ))
+                    .setUv(0.0F, topV).setColor(1.0F, 1.0F, 1.0F, alpha).setLight(column.light());
+        }
+
+        if (builder != null) {
+            BufferUploader.drawWithShader(builder.buildOrThrow());
+        }
+    }
+
+    private static PrecipitationColumns collectPrecipitationColumns(
+            Minecraft minecraft,
+            int minX,
+            int maxX,
+            int minZ,
+            int maxZ,
+            int lowerY,
+            int upperY,
+            int step
+    ) {
+        List<PrecipitationColumn> rain = new ArrayList<>();
+        List<PrecipitationColumn> snow = new ArrayList<>();
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+        int sampleY = Mth.floor(RtsCameraState.getCenter().y);
         int startX = Math.floorDiv(minX, step) * step;
         int startZ = Math.floorDiv(minZ, step) * step;
+
         for (int cellZ = startZ; cellZ <= maxZ; cellZ += step) {
             for (int cellX = startX; cellX <= maxX; cellX += step) {
                 RandomSource random = RandomSource.create(sampleSeed(cellX, cellZ));
@@ -170,7 +208,8 @@ public final class RtsIsometricWeatherRenderer {
                 if (x < minX || x > maxX || z < minZ || z > maxZ) {
                     continue;
                 }
-                mutable.set(x, Mth.floor(RtsCameraState.getCenter().y), z);
+
+                mutable.set(x, sampleY, z);
                 Biome biome = minecraft.level.getBiome(mutable).value();
                 if (!biome.hasPrecipitation()) {
                     continue;
@@ -178,45 +217,49 @@ public final class RtsIsometricWeatherRenderer {
 
                 int surfaceY = minecraft.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
                 mutable.set(x, surfaceY, z);
-                if (biome.getPrecipitationAt(mutable) != requestedType) {
+                Biome.Precipitation type = biome.getPrecipitationAt(mutable);
+                if (type != Biome.Precipitation.RAIN && type != Biome.Precipitation.SNOW) {
                     continue;
                 }
-
                 int bottomY = Math.max(surfaceY, lowerY);
                 int topY = Math.max(bottomY + 4, upperY);
-                if (builder == null) {
-                    RenderSystem.setShaderTexture(0, texture);
-                    builder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
-                }
-
-                float speed = requestedType == Biome.Precipitation.RAIN
-                        ? 3.0F + random.nextFloat()
-                        : 0.25F;
-                float vOffset = -((float) (ticks & 131071L) + partialTick) / 32.0F * speed;
-                float alpha = rainLevel * (requestedType == Biome.Precipitation.RAIN ? 0.78F : 0.68F);
                 int light = LevelRenderer.getLightColor(minecraft.level, mutable);
-                double baseX = x + 0.5D - camX;
-                double baseZ = z + 0.5D - camZ;
-                float bottomV = bottomY * 0.25F + vOffset;
-                float topV = topY * 0.25F + vOffset;
-
-                builder.addVertex((float) (baseX - widthX), (float) (topY - camY), (float) (baseZ - widthZ))
-                        .setUv(0.0F, bottomV).setColor(1.0F, 1.0F, 1.0F, alpha).setLight(light);
-                builder.addVertex((float) (baseX + widthX), (float) (topY - camY), (float) (baseZ + widthZ))
-                        .setUv(1.0F, bottomV).setColor(1.0F, 1.0F, 1.0F, alpha).setLight(light);
-                builder.addVertex((float) (baseX + widthX), (float) (bottomY - camY), (float) (baseZ + widthZ))
-                        .setUv(1.0F, topV).setColor(1.0F, 1.0F, 1.0F, alpha).setLight(light);
-                builder.addVertex((float) (baseX - widthX), (float) (bottomY - camY), (float) (baseZ - widthZ))
-                        .setUv(0.0F, topV).setColor(1.0F, 1.0F, 1.0F, alpha).setLight(light);
+                PrecipitationColumn column = new PrecipitationColumn(
+                        x,
+                        z,
+                        bottomY,
+                        topY,
+                        light,
+                        type == Biome.Precipitation.RAIN ? 3.0F + random.nextFloat() : 0.25F
+                );
+                if (type == Biome.Precipitation.RAIN) {
+                    rain.add(column);
+                } else if (type == Biome.Precipitation.SNOW) {
+                    snow.add(column);
+                }
             }
         }
 
-        if (builder != null) {
-            BufferUploader.drawWithShader(builder.buildOrThrow());
-        }
+        return new PrecipitationColumns(rain, snow);
     }
 
     private static long sampleSeed(int x, int z) {
         return (long) (x * x * 3121 + x * 45238971 ^ z * z * 418711 + z * 13761);
+    }
+
+    private record PrecipitationColumn(
+            int x,
+            int z,
+            int bottomY,
+            int topY,
+            int light,
+            float rainSpeed
+    ) {
+    }
+
+    private record PrecipitationColumns(
+            List<PrecipitationColumn> rain,
+            List<PrecipitationColumn> snow
+    ) {
     }
 }

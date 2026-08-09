@@ -304,6 +304,7 @@ final class RtsEntityPortraitRenderer {
         return ThreadLocalRandom.current().nextInt(minInclusive, maxInclusive + 1);
     }
 
+    @SuppressWarnings("deprecation") // Vanilla 1.21.1 InventoryScreen uses the same portrait rendering wrapper.
     private static void drawEntityOnScreen(PoseStack poseStack, LivingEntity entity, int x, int y, int size) {
         Minecraft minecraft = Minecraft.getInstance();
         float yawRadians = (float) Math.atan(-lookX / 40.0F);

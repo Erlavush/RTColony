@@ -1,75 +1,98 @@
 # RTColony
 
-RTColony is a planned NeoForge 1.21.1 Minecraft Java mod for an RTS-style camera and
-management interface.
+RTColony is a NeoForge 1.21.1 Minecraft Java mod that adds an RTS-style camera,
+selection layer, and server-authoritative MineColonies starter-supply placement flow.
 
-The first development target is a small client-side prototype:
+Current gameplay includes:
 
-- F4 keybind to toggle RTS mode
-- overhead/isometric camera state
-- camera panning, zoom, and rotation
-- click/raycast selection
-- simple selection highlight and HUD
+- overhead perspective and orthographic True Isometric cameras
+- edge/drag panning, zoom, rotation, entity follow, selection outlines, and RTS HUD
+- a Sodium-compatible terrain cutaway for obscured selected entities
+- MineColonies citizen/building information and native read-only details screens
+- Supply Camp and Supply Ship blueprint preview, validation, adjustment, and placement
+- an in-game client config screen opened with `O`
 
-MineColonies and Create integration are planned after the camera/input prototype is
-stable.
+The concise control and feature flow lives in `MainFeatures.md`.
 
-## Development
+## Development environment
 
-This project uses a Java 21 JDK copied from the local Prism Launcher runtime:
+RTColony uses Java 21. On this Arch installation, the verified tools are installed
+without system-wide packages:
+
+- Temurin 21.0.12+8: `~/.local/opt/jdks/minecraft-java-21`
+- IntelliJ IDEA 2026.2.0.1 unified distribution: `~/.local/opt/idea`
+- Flite 2.2 for Minecraft narration: `~/.local/opt/flite`
+- commands: `~/.local/bin/java21`, `javac21`, `idea`, and `flite`
+
+The unified IntelliJ distribution keeps its core Java/Kotlin feature set free; a paid
+license is only needed for the additional Ultimate features.
+
+Load the project JDK and verify it:
 
 ```bash
 source ./dev-env.sh
 ```
 
-Open the project in IntelliJ IDEA Community:
+Build and run all automated tests:
+
+```bash
+./gradlew build
+```
+
+Open the project in IntelliJ:
 
 ```bash
 ./open-idea.sh
 ```
 
-Prepare IntelliJ run/debug arguments after a clean checkout or `./gradlew clean`:
+Use `~/.local/opt/jdks/minecraft-java-21` as IntelliJ's Project SDK and Gradle JVM.
+After a new checkout or `./gradlew clean`, prepare all IntelliJ run configurations with:
 
 ```bash
 ./gradlew prepareClientRun prepareQuickClientRun prepareDataRun prepareServerRun
 ```
 
-Use the shared IntelliJ run configurations:
+The versioned `.run/` configurations are:
 
-- `QuickClient`: starts the dev client and opens the `RTCOLONY` singleplayer world.
-- `Client`: starts the normal dev client.
-- `Server`: starts a dev server.
-- `Data`: runs data generation.
+- `QuickClient`: opens the `RTCOLONY` singleplayer world
+- `Client`: starts the normal development client
+- `Server`: starts a headless development server
+- `Data`: runs data generation
 
-For the fastest edit loop, run `QuickClient` in IntelliJ Debug mode. Simple method-body
-changes in normal client classes can usually be reloaded with IntelliJ HotSwap after
-recompiling. Restart the client after changing mixins, registration/startup code,
-Gradle dependencies, mod metadata, or anything loaded once during Minecraft startup.
-Use `F3 + T` in-game for resource reloads such as textures and lang files.
+## Reproducible mod dependencies
 
-The NeoForge scaffold is present. Use `./gradlew build` for the first verification pass.
+Gradle downloads the development mods from their official Maven repositories; do not copy
+jars into `run/mods`. The pinned direct versions are:
 
-Run the development client:
+- MineColonies `1.1.1319-1.21.1-snapshot`
+- Structurize `1.0.832-1.21.1-snapshot`
+- BlockUI `1.0.199-1.21.1-snapshot` for its public LDTTeam API types
+- Jade `15.10.6+neoforge`
+- Sodium `mc1.21.1-0.6.13-neoforge`
+
+MineColonies' required BlockUI, Domum Ornamentum, Multi-Piston, Structurize, and LDTTeam
+data-generator dependencies are resolved transitively. Optional JEI is intentionally
+excluded from the normal development runtime.
+
+## Running and edit loop
+
+Run a normal or quick development client from Gradle with:
 
 ```bash
 ./gradlew runClient
-```
-
-Run the development client and directly open the `RTCOLONY` singleplayer world:
-
-```bash
 ./gradlew runQuickClient
 ```
 
-The `runClient` configuration is set to use NVIDIA PRIME offload on hybrid
-Intel/NVIDIA laptops. To confirm it, open the F3 screen in Minecraft and check that the
-renderer mentions NVIDIA, or run `nvidia-smi` in another terminal and look for the Java
-process while Minecraft is open.
+Simple method-body changes may HotSwap after IntelliJ Build Project (`Ctrl+F9`) only when
+the JVM confirms that classes reloaded. Restart Minecraft after mixin, input, method-shape,
+registration, dependency, or mod-metadata changes. Use `F3+T` for resource-only changes.
+
+The client runs include NVIDIA PRIME offload environment variables for this hybrid-GPU
+machine. Minecraft's F3 renderer line or `nvidia-smi` can confirm which GPU is active.
+
+GitHub Actions runs the same `./gradlew build` verification on Java 21.
 
 ## License
 
-RTColony is licensed under GPL-3.0-only.
-
-Third-party code/assets copied or adapted from reference mods are tracked in
-`THIRD_PARTY_NOTICES.md`. UI and camera work should follow the reference-first rules in
-`docs/reference-porting-rules.md`.
+RTColony is licensed under GPL-3.0-only. Copied or adapted reference material is tracked in
+`THIRD_PARTY_NOTICES.md`; reference-first rules live in `docs/reference-porting-rules.md`.

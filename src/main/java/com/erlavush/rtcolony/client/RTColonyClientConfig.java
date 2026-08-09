@@ -10,8 +10,10 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 public final class RTColonyClientConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -19,6 +21,7 @@ public final class RTColonyClientConfig {
     private static Config current = new Config();
     private static Path configPath;
     private static long lastModifiedMillis = Long.MIN_VALUE;
+    private static long lastFailedModifiedMillis = Long.MIN_VALUE;
     private static long nextCheckMillis;
 
     private RTColonyClientConfig() {
@@ -65,20 +68,29 @@ public final class RTColonyClientConfig {
 
     private static void refresh(Minecraft minecraft) {
         Path path = path(minecraft);
+        long modifiedMillis;
         try {
             ensureExists(path);
-            long modifiedMillis = Files.getLastModifiedTime(path).toMillis();
-            if (modifiedMillis == lastModifiedMillis) {
-                return;
-            }
+            modifiedMillis = Files.getLastModifiedTime(path).toMillis();
+        } catch (IOException exception) {
+            RTColony.LOGGER.warn("Unable to inspect RTColony client config at {}", path, exception);
+            return;
+        }
 
+        if (modifiedMillis == lastModifiedMillis || modifiedMillis == lastFailedModifiedMillis) {
+            return;
+        }
+
+        try {
             try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
                 Config loaded = GSON.fromJson(reader, Config.class);
                 current = loaded == null ? new Config() : loaded.normalized();
                 lastModifiedMillis = modifiedMillis;
+                lastFailedModifiedMillis = Long.MIN_VALUE;
                 RTColony.LOGGER.info("Reloaded RTColony client config from {}", path);
             }
         } catch (IOException | JsonSyntaxException exception) {
+            lastFailedModifiedMillis = modifiedMillis;
             RTColony.LOGGER.warn("Unable to load RTColony client config from {}", path, exception);
         }
     }
@@ -88,10 +100,9 @@ public final class RTColonyClientConfig {
         try {
             Files.createDirectories(path.getParent());
             current = current.normalized();
-            try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-                GSON.toJson(current, writer);
-            }
+            writeAtomically(path, current);
             lastModifiedMillis = Files.getLastModifiedTime(path).toMillis();
+            lastFailedModifiedMillis = Long.MIN_VALUE;
         } catch (IOException exception) {
             RTColony.LOGGER.warn("Unable to save RTColony client config to {}", path, exception);
         }
@@ -112,6 +123,33 @@ public final class RTColonyClientConfig {
         Files.createDirectories(path.getParent());
         try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             GSON.toJson(new Config(), writer);
+        }
+    }
+
+    private static void writeAtomically(Path path, Config config) throws IOException {
+        Path temporaryPath = path.resolveSibling(path.getFileName() + ".tmp");
+        try {
+            try (Writer writer = Files.newBufferedWriter(temporaryPath, StandardCharsets.UTF_8)) {
+                GSON.toJson(config, writer);
+            }
+
+            try {
+                Files.move(
+                        temporaryPath,
+                        path,
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporaryPath, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException exception) {
+            try {
+                Files.deleteIfExists(temporaryPath);
+            } catch (IOException cleanupException) {
+                exception.addSuppressed(cleanupException);
+            }
+            throw exception;
         }
     }
 

@@ -221,7 +221,7 @@ public final class RtsBuildDrawer {
     }
 
     static boolean isMouseOver(Minecraft minecraft) {
-        if (!RtsModeState.isEnabled() || minecraft.screen != null) {
+        if (!RtsModeState.isEnabled() || minecraft.options.hideGui || minecraft.screen != null) {
             return false;
         }
 
@@ -250,7 +250,7 @@ public final class RtsBuildDrawer {
 
         if (previewActive && placementMode == PlacementMode.LOCKED_ADJUSTING) {
             if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-                if (isInsidePlacementPanel(minecraft, mouseX, mouseY)) {
+                if (!minecraft.options.hideGui && isInsidePlacementPanel(minecraft, mouseX, mouseY)) {
                     return handlePlacementPanelClick(minecraft, mouseX, mouseY);
                 }
                 return true;
@@ -262,6 +262,10 @@ public final class RtsBuildDrawer {
 
         if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && previewActive) {
             return lockPreview(minecraft);
+        }
+
+        if (minecraft.options.hideGui) {
+            return false;
         }
 
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {

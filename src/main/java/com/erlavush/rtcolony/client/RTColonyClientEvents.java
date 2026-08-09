@@ -25,7 +25,7 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 public final class RTColonyClientEvents {
     private static final int EDGE_PAN_PIXELS = 8;
-    private static boolean enableRtsModeOnNextWorld = true;
+    private static final RtsWorldActivationState WORLD_ACTIVATION = new RtsWorldActivationState();
 
     private RTColonyClientEvents() {
     }
@@ -33,6 +33,11 @@ public final class RTColonyClientEvents {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
+        boolean worldChanged = WORLD_ACTIVATION.observeWorld(minecraft.level);
+        if (worldChanged && RtsModeState.isEnabled()) {
+            RtsModeState.setEnabled(false);
+        }
+
         while (RTColonyKeyMappings.OPEN_CONFIG.consumeClick()) {
             if (minecraft.screen == null) {
                 minecraft.setScreen(new RTColonyConfigScreen(null));
@@ -40,7 +45,7 @@ public final class RTColonyClientEvents {
         }
 
         while (RTColonyKeyMappings.CYCLE_CAMERA_MODE.consumeClick()) {
-            enableRtsModeOnNextWorld = false;
+            suppressAutoEnableForCurrentWorld();
             if (RtsModeState.isEnabled()) {
                 RtsCameraState.cycleMode();
             } else {
@@ -52,11 +57,11 @@ public final class RTColonyClientEvents {
             RtsCutawayState.clear();
             RtsSodiumCutaway.clear();
 
-            if (enableRtsModeOnNextWorld
-                    && minecraft.player != null
-                    && minecraft.level != null
-                    && minecraft.screen == null) {
-                enableRtsModeOnNextWorld = false;
+            if (WORLD_ACTIVATION.consumeWhenReady(
+                    minecraft.player != null
+                            && minecraft.level != null
+                            && minecraft.screen == null
+            )) {
                 RtsCameraState.setMode(RtsCameraMode.PERSPECTIVE);
                 RtsModeState.setEnabled(true);
             } else {
@@ -99,6 +104,10 @@ public final class RTColonyClientEvents {
 
         RtsCutawayState.tick(minecraft);
         RtsSodiumCutaway.tick(minecraft);
+    }
+
+    public static void suppressAutoEnableForCurrentWorld() {
+        WORLD_ACTIVATION.suppressForCurrentWorld();
     }
 
     @SubscribeEvent

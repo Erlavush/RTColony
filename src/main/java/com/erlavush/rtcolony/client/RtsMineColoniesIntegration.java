@@ -1,5 +1,6 @@
 package com.erlavush.rtcolony.client;
 
+import com.erlavush.rtcolony.RTColony;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /*
  * Read-only optional MineColonies adapter.
@@ -28,12 +30,14 @@ import java.util.Set;
  * - IColonyManager#getBuildingView(...)
  * - IBuildingView
  *
- * Reflection keeps RTColony from requiring MineColonies on the compile classpath.
+ * Reflection limits coupling to MineColonies' read-only client UI APIs, which
+ * change more frequently than its placement API.
  */
 final class RtsMineColoniesIntegration {
     private static final String COLONY_MANAGER_CLASS = "com.minecolonies.api.colony.IColonyManager";
     private static final String CITIZEN_WINDOW_CLASS = "com.minecolonies.core.client.gui.citizen.MainWindowCitizen";
     private static final long BUILDING_CACHE_TICKS = 20L;
+    private static final Set<String> LOGGED_DIAGNOSTICS = ConcurrentHashMap.newKeySet();
 
     private static Level cachedBuildingLevel;
     private static long nextBuildingCacheTick = Long.MIN_VALUE;
@@ -154,9 +158,11 @@ final class RtsMineColoniesIntegration {
                     }
                 }
             } catch (ClassNotFoundException | InstantiationException | IllegalAccessException
-                     | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+                     | InvocationTargetException | NoSuchMethodException | RuntimeException exception) {
+                logFailureOnce("opening native citizen details", exception);
                 return false;
             }
+            logFailureOnce("finding a compatible native citizen-details window", null);
             return false;
         }
 
@@ -169,7 +175,8 @@ final class RtsMineColoniesIntegration {
                 Method method = buildingView.getClass().getMethod("openGui", boolean.class);
                 method.invoke(buildingView, false);
                 return true;
-            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException exception) {
+                logFailureOnce("opening native building details", exception);
                 return false;
             }
         }
@@ -229,7 +236,8 @@ final class RtsMineColoniesIntegration {
                     }
                 }
             }
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException exception) {
+            logFailureOnce("refreshing the client building cache", exception);
             cachedBuildingTargets = List.of();
             return;
         }
@@ -267,7 +275,8 @@ final class RtsMineColoniesIntegration {
         try {
             Method method = manager.getClass().getMethod("getBuildingView", ResourceKey.class, BlockPos.class);
             return Optional.ofNullable(method.invoke(manager, level.dimension(), blockPos));
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException exception) {
+            logFailureOnce("looking up a building view", exception);
             return Optional.empty();
         }
     }
@@ -285,7 +294,8 @@ final class RtsMineColoniesIntegration {
         try {
             Method method = manager.getClass().getMethod("getColonyView", int.class, ResourceKey.class);
             return Optional.ofNullable(method.invoke(manager, colonyId, level.dimension()));
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException exception) {
+            logFailureOnce("looking up a colony view", exception);
             return Optional.empty();
         }
     }
@@ -295,8 +305,28 @@ final class RtsMineColoniesIntegration {
             Class<?> managerClass = Class.forName(COLONY_MANAGER_CLASS);
             Method method = managerClass.getMethod("getInstance");
             return Optional.ofNullable(method.invoke(null));
-        } catch (ClassNotFoundException | IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException ignored) {
+        } catch (ClassNotFoundException | IllegalAccessException | InvocationTargetException | NoSuchMethodException | RuntimeException exception) {
+            logFailureOnce("resolving the MineColonies colony manager", exception);
             return Optional.empty();
+        }
+    }
+
+    private static void logFailureOnce(String operation, Throwable exception) {
+        if (!LOGGED_DIAGNOSTICS.add(operation)) {
+            return;
+        }
+
+        if (exception == null) {
+            RTColony.LOGGER.warn(
+                    "MineColonies integration could not complete {}. Check the pinned MineColonies version.",
+                    operation
+            );
+        } else {
+            RTColony.LOGGER.warn(
+                    "MineColonies integration failed while {}. Check the pinned MineColonies version.",
+                    operation,
+                    exception
+            );
         }
     }
 

@@ -7,6 +7,8 @@ runs/
 references/
 .idea/
 *.iml
+*.ipr
+*.iws
 *.log
 hs_err_pid*.log
 replay_pid*.log
