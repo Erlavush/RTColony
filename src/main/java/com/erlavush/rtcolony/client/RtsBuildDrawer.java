@@ -711,7 +711,7 @@ public final class RtsBuildDrawer {
     private static void focusCameraOnPreview() {
         BlueprintPreviewData previewData = RenderingCache.getBlueprintPreviewData(PREVIEW_KEY);
         if (previewData != null) {
-            RtsCameraState.focusOn(previewCenter(previewData));
+            RtsCameraState.beginLockedPlacement(previewCenter(previewData));
         }
     }
 

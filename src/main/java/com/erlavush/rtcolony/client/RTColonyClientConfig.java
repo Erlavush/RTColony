@@ -66,6 +66,12 @@ public final class RTColonyClientConfig {
         save(minecraft);
     }
 
+    public static void setTerrainFollowingEnabled(Minecraft minecraft, boolean value) {
+        Config config = get(minecraft);
+        config.terrainFollowingEnabled = value;
+        save(minecraft);
+    }
+
     private static void refresh(Minecraft minecraft) {
         Path path = path(minecraft);
         long modifiedMillis;
@@ -158,6 +164,7 @@ public final class RTColonyClientConfig {
         private boolean invertLockedPlacementOrbitVertical;
         private Boolean edgePanningEnabled = true;
         private Float edgePanningSensitivity = 1.0F;
+        private Boolean terrainFollowingEnabled = true;
         private Boolean terrainStabilizationEnabled = true;
 
         private Config normalized() {
@@ -169,6 +176,9 @@ public final class RTColonyClientConfig {
             }
             if (this.terrainStabilizationEnabled == null) {
                 this.terrainStabilizationEnabled = true;
+            }
+            if (this.terrainFollowingEnabled == null) {
+                this.terrainFollowingEnabled = true;
             }
             this.edgePanningSensitivity = Math.max(0.25F, Math.min(3.0F, this.edgePanningSensitivity));
             return this;
@@ -192,6 +202,10 @@ public final class RTColonyClientConfig {
 
         public boolean terrainStabilizationEnabled() {
             return Boolean.TRUE.equals(this.terrainStabilizationEnabled);
+        }
+
+        public boolean terrainFollowingEnabled() {
+            return Boolean.TRUE.equals(this.terrainFollowingEnabled);
         }
     }
 }

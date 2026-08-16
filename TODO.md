@@ -60,6 +60,8 @@ implement a feature without the alignment questions and an approved design requi
 - Cache previews locally; invalidate on resource/structure-pack changes.
 - [x] Add a Roblox-tycoon-style dotted/grid footprint overlay in preview mode:
   green valid ground, red blocked area, clear origin/facing marker, and visible rotation.
+- [ ] Fix the locked-placement footprint grid becoming misaligned with the building bounds
+  on some blueprint rotations; verify every quarter-turn for camps, ships, and buildings.
 - Start snapping with predictable block-grid/footprint behavior. Consider road, shoreline,
   and building alignment snapping only later.
 - Show materials in preview mode and show actual missing/delivered requirements when an

@@ -5,8 +5,9 @@ selection layer, and server-authoritative MineColonies starter-supply placement 
 
 Current gameplay includes:
 
-- overhead perspective and orthographic True Isometric cameras
+- RTS Perspective, Fixed Angle, True Isometric, and Freecam camera modes cycled with `F4`
 - edge/drag panning, zoom, rotation, entity follow, selection outlines, and RTS HUD
+- smooth pose transitions from Freecam back to the RTS Perspective camera
 - a Sodium-compatible terrain cutaway for obscured selected entities
 - MineColonies citizen/building information and native read-only details screens
 - Supply Camp and Supply Ship blueprint preview, validation, adjustment, and placement
@@ -52,6 +53,12 @@ After a new checkout or `./gradlew clean`, prepare all IntelliJ run configuratio
 ./gradlew prepareClientRun prepareQuickClientRun prepareDataRun prepareServerRun
 ```
 
+After changing Gradle mod dependencies, refresh IntelliJ's generated module classpath with:
+
+```bash
+./gradlew ideaModule
+```
+
 The versioned `.run/` configurations are:
 
 - `QuickClient`: opens the `RTCOLONY` singleplayer world
@@ -69,10 +76,13 @@ jars into `run/mods`. The pinned direct versions are:
 - BlockUI `1.0.199-1.21.1-snapshot` for its public LDTTeam API types
 - Jade `15.10.6+neoforge`
 - Sodium `mc1.21.1-0.6.13-neoforge`
+- Freecam `1.3.0+mc1.21.1` for NeoForge
 
 MineColonies' required BlockUI, Domum Ornamentum, Multi-Piston, Structurize, and LDTTeam
 data-generator dependencies are resolved transitively. Optional JEI is intentionally
-excluded from the normal development runtime.
+excluded from the normal development runtime. Freecam is a required client dependency and
+must be included separately when assembling a playable modpack; it is not embedded in the
+RTColony jar.
 
 ## Running and edit loop
 

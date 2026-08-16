@@ -55,3 +55,10 @@ description='''${mod_description}'''
     versionRange="${sodium_version_range}"
     ordering="AFTER"
     side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="freecam"
+    type="required"
+    versionRange="${freecam_version_range}"
+    ordering="AFTER"
+    side="CLIENT"

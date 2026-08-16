@@ -1,11 +1,14 @@
 package com.erlavush.rtcolony.mixin;
 
 import com.erlavush.rtcolony.client.RTColonyClientEvents;
+import com.erlavush.rtcolony.client.RTColonyKeyMappings;
 import com.erlavush.rtcolony.client.RtsBuildDrawer;
+import com.erlavush.rtcolony.client.RtsCameraState;
 import com.erlavush.rtcolony.client.RtsModeState;
 import com.erlavush.rtcolony.client.RtsTargetingState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyboardHandler;
+import net.xolt.freecam.config.ModBindings;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -17,6 +20,16 @@ public abstract class KeyboardHandlerMixin {
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
     private void rtcolony$handleBuildDrawerHotkey(long window, int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
         Minecraft minecraft = Minecraft.getInstance();
+        boolean rtcolonyCycleKey = RTColonyKeyMappings.CYCLE_CAMERA_MODE.matches(key, scanCode);
+        boolean standaloneFreecamKey = ModBindings.KEY_TOGGLE.get().matches(key, scanCode);
+        if (minecraft.screen == null && (rtcolonyCycleKey || standaloneFreecamKey)) {
+            if (rtcolonyCycleKey && action == GLFW.GLFW_PRESS) {
+                RTColonyClientEvents.cycleCameraModeFromInput();
+            }
+            ci.cancel();
+            return;
+        }
+
         if (RtsModeState.isEnabled()
                 && action == GLFW.GLFW_PRESS
                 && key == GLFW.GLFW_KEY_F5
@@ -30,6 +43,10 @@ public abstract class KeyboardHandlerMixin {
         if (!RtsModeState.isEnabled()
                 || action != GLFW.GLFW_PRESS && action != GLFW.GLFW_REPEAT
                 || minecraft.screen != null) {
+            return;
+        }
+
+        if (RtsCameraState.isFreecam() || RtsCameraState.isTransitioningFromFreecam()) {
             return;
         }
 

@@ -86,6 +86,19 @@ MineFortress is intended as a reference for RTS camera, selection, and vanilla-s
 Minecraft GUI behavior. If RTColony copies substantial MineFortress code or assets, keep
 the MIT copyright and permission notice with the copied/adapted material.
 
+## Freecam
+
+- Repository: `https://github.com/MinecraftFreecam/Freecam`
+- Modrinth project: `https://modrinth.com/mod/freecam`
+- Development artifact: `maven.modrinth:XeEZ3fK2:ROfcbxxe`
+- Version: `1.3.0+mc1.21.1` for NeoForge 1.21.1
+- License: MIT
+- Copyright: Freecam contributors, including hashalite and Matt Sturgeon
+
+RTColony uses Freecam as an external client dependency and calls its public camera API for
+the fourth `F4` camera mode. The Freecam jar is not copied into RTColony's source or output
+jar. If it is bundled later, its MIT license and copyright notice must accompany it.
+
 ## Dungeons Perspective
 
 - Repository: `https://github.com/cleannrooster/dungeons-perspective`

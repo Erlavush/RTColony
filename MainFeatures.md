@@ -8,8 +8,8 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 - RTS mode auto-enables once for each joined world. Exiting it manually keeps vanilla view
   active for that world until `F4` is pressed or a different world is joined.
-- `F4` cycles between RTS Perspective and True Isometric. From vanilla view, it returns to
-  the last RTS camera mode.
+- `F4` cycles through RTS Perspective, Fixed Angle, True Isometric, and Freecam. From
+  vanilla view, it returns to RTS Perspective.
 - `F5` exits RTS mode to vanilla Minecraft view. Once outside RTS mode, vanilla `F5`
   perspective cycling works normally.
 - RTS mode owns camera and input.
@@ -18,19 +18,35 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 ## RTS Camera
 
-- RTS Perspective uses an overhead terrain-following camera. Smooth terrain-height changes
-  are enabled by default; disabling that option snaps camera height to the new terrain level
-  immediately, with no vertical transition animation.
+- RTS Perspective is a perspective-projection camera with a locked 60-degree downward pitch.
+  Scroll changes camera altitude while preserving that pitch. Terrain following is enabled by
+  default and can be disabled; with it enabled, scroll adjusts the height offset above followed
+  terrain. Smooth terrain-height changes can be disabled to snap to the new terrain level.
+- Fixed Angle uses the same perspective camera controls with a locked 45-degree downward pitch.
+  It never follows terrain. Scroll changes unrestricted world Y while preserving camera X/Z and
+  pitch, including below the world and void.
+- In both perspective modes, edge and left-drag panning translate the camera and virtual focus
+  across X/Z. Horizontal right-drag moves the camera around that focus in a level circle;
+  vertical right-drag is ignored.
 - True Isometric uses an orthographic, fixed-angle RTS projection with no perspective depth
   or terrain-height bobbing.
 - Rain and snow cover the complete True Isometric viewport at every zoom level instead of
   exposing vanilla's fixed precipitation circle.
-- Mouse wheel zooms through a closer range in both RTS camera modes.
+- Mouse wheel changes altitude in RTS Perspective and Fixed Angle. It changes orthographic
+  view scale in True Isometric and orbit distance during locked building placement.
 - Edge panning moves the camera when enabled.
 - Edge panning speed is configurable with a slider.
 - Left mouse drag pans.
-- Right mouse drag rotates in RTS Perspective.
+- Right mouse drag orbits horizontally in RTS Perspective and Fixed Angle while vertical drag
+  is ignored.
 - True Isometric right mouse drag rotates in discrete 90-degree quarter turns.
+- Freecam starts at the current RTS camera pose and uses captured-mouse free look,
+  `W/A/S/D` flight, `Space` to rise, and `Shift` to descend without block collision.
+- The real player remains frozen during Freecam. RTS panning, selection, building UI,
+  and terrain following are suspended until Freecam ends.
+- Leaving Freecam with `F4` uses a 0.7-second eased position/yaw/pitch transition back
+  to the saved RTS Perspective pose. Camera controls remain locked during the transition.
+- `F5` remains an immediate exit from Freecam and RTS mode to vanilla view.
 
 ## Selection and Focus
 
@@ -82,8 +98,8 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 
 ## Locked Placement
 
-- Right-click drag uses a free spherical yaw/pitch orbit around the preview center in both
-  RTS camera modes; releasing right-click ends the orbit.
+- Right-click drag uses a free spherical yaw/pitch orbit around the preview center in every
+  placement-capable RTS camera mode; releasing right-click ends the orbit.
 - The preview stops following the cursor.
 - The camera locks to the preview building center.
 - Left click is consumed except for RTColony placement UI buttons.
@@ -96,6 +112,7 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - `Enter` confirms placement.
 - `Esc` cancels and returns to the open build drawer.
 - Canceling or confirming placement returns the camera to the RTS overhead pitch.
+- RTS Perspective and Fixed Angle restore their saved camera rig after placement.
 
 ## Placement UI
 
@@ -115,14 +132,16 @@ RTColony turns Minecraft colony management into an RTS-style control layer while
 - Current options:
   - edge panning enabled
   - edge panning speed
+  - follow terrain height
   - smooth terrain-height changes
-  - invert locked placement horizontal orbit
-  - invert locked placement vertical orbit
+  - invert perspective-camera/locked-placement horizontal orbit
+  - invert locked-placement vertical orbit
 
 ## Main Classes
 
 - `RtsModeState`: RTS enabled state.
 - `RtsCameraState`: camera center, zoom, pan, rotation, terrain follow, placement orbit.
+- `RtsFreecamIntegration`: pinned Freecam API bridge and camera-pose transfer.
 - `RtsTargetingState`: cursor targeting, selection, building bounds, and entity follow.
 - `RtsSodiumCutaway`: Dungeons Perspective-based entity cone, interior flood fill,
   and Sodium section rebuild state.

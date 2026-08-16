@@ -28,8 +28,10 @@ MineColonies and Create integration.
 
 ## Current Implemented State
 
-- RTS mode auto-enables once per joined world. `F4` enters/cycles RTS camera modes, and
-  `F5` exits to vanilla view for the remainder of the current world.
+- RTS mode auto-enables once per joined world. `F4` cycles RTS Perspective, Fixed Angle,
+  True Isometric, and Freecam; `F5` exits to vanilla view for the remainder of the world.
+- Freecam `1.3.0+mc1.21.1` is a required external client dependency. Leaving Freecam with
+  `F4` eases back to the saved RTS Perspective pose; `F5` exits immediately.
 - `Ctrl+B` opens the RTColony build drawer while RTS mode is active.
 - The build drawer currently supports MineColonies starter supplies:
   - Supply Camp
@@ -67,9 +69,10 @@ MineColonies and Create integration.
   - current options:
     - edge panning enabled.
     - edge panning speed slider.
+    - RTS Perspective terrain following.
     - smooth terrain-height changes.
-    - invert locked placement horizontal orbit.
-    - invert locked placement vertical orbit.
+    - invert perspective-camera and locked-placement horizontal orbit.
+    - invert locked-placement vertical orbit.
 - Drawer visual tuning config still exists separately:
   - `run/config/rtcolony-client-ui.json`
   - ignored under `run/`; do not overwrite the user's local tuning unless explicitly asked.
@@ -80,6 +83,8 @@ MineColonies and Create integration.
 
 - Camera/input/mixin changes generally require restarting the Minecraft client. Do not
   promise IntelliJ hotswap for mixin changes, new methods, or input behavior changes.
+- After Gradle dependency changes, run `./gradlew ideaModule` so IntelliJ's generated
+  `RTColony.iml` classpath includes the new dependency before using its Debug action.
 - For simple UI/data-only tweaks, `Ctrl+F9`/Build Project may hotswap only if the JVM
   reports classes were reloaded. If the game says classes are up to date or behavior does
   not change, restart the client.

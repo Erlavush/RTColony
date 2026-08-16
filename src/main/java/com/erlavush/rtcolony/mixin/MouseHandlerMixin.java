@@ -39,14 +39,17 @@ public abstract class MouseHandlerMixin {
 
     @Inject(method = "grabMouse", at = @At("HEAD"), cancellable = true)
     private void rtcolony$preventMouseGrabInRtsMode(CallbackInfo ci) {
-        if (RtsModeState.isEnabled()) {
+        if (RtsModeState.isEnabled() && !RtsCameraState.isFreecam()) {
             ci.cancel();
         }
     }
 
     @Inject(method = "onMove", at = @At("HEAD"))
     private void rtcolony$moveRtsCameraFromMouseDrag(long window, double mouseX, double mouseY, CallbackInfo ci) {
-        if (!RtsModeState.isEnabled() || !RtsCameraState.isActive()) {
+        if (!RtsModeState.isEnabled()
+                || !RtsCameraState.isActive()
+                || RtsCameraState.isFreecam()
+                || RtsCameraState.isTransitioningFromFreecam()) {
             return;
         }
 
@@ -67,7 +70,15 @@ public abstract class MouseHandlerMixin {
                         config.invertLockedPlacementOrbitVertical()
                 );
             } else {
-                RtsCameraState.rotateFromScreenDrag(mouseX - this.xpos);
+                if (!RtsCameraState.isTrueIsometric()) {
+                    RTColonyClientConfig.Config config = RTColonyClientConfig.get(this.minecraft);
+                    RtsCameraState.orbitPerspectiveFromScreenDrag(
+                            mouseX - this.xpos,
+                            config.invertLockedPlacementOrbitHorizontal()
+                    );
+                } else {
+                    RtsCameraState.rotateFromScreenDrag(mouseX - this.xpos);
+                }
             }
         } else if (this.isLeftPressed) {
             if (!RtsBuildDrawer.isPlacementLocked()) {
@@ -79,6 +90,8 @@ public abstract class MouseHandlerMixin {
     @Inject(method = "onPress", at = @At("HEAD"), cancellable = true)
     private void rtcolony$handleRtsDrawerClick(long window, int button, int action, int mods, CallbackInfo ci) {
         if (!RtsModeState.isEnabled()
+                || RtsCameraState.isFreecam()
+                || RtsCameraState.isTransitioningFromFreecam()
                 || window != this.minecraft.getWindow().getWindow()
                 || this.minecraft.screen != null) {
             return;
@@ -96,6 +109,8 @@ public abstract class MouseHandlerMixin {
     @Inject(method = "onPress", at = @At("TAIL"))
     private void rtcolony$selectRtsTarget(long window, int button, int action, int mods, CallbackInfo ci) {
         if (!RtsModeState.isEnabled()
+                || RtsCameraState.isFreecam()
+                || RtsCameraState.isTransitioningFromFreecam()
                 || window != this.minecraft.getWindow().getWindow()
                 || this.minecraft.screen != null
                 || button != GLFW.GLFW_MOUSE_BUTTON_RIGHT

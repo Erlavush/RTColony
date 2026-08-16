@@ -2,9 +2,16 @@ package com.erlavush.rtcolony.client;
 
 public enum RtsCameraMode {
     PERSPECTIVE,
-    TRUE_ISOMETRIC;
+    FIXED_ANGLE,
+    TRUE_ISOMETRIC,
+    FREECAM;
 
     public RtsCameraMode next() {
-        return this == PERSPECTIVE ? TRUE_ISOMETRIC : PERSPECTIVE;
+        return switch (this) {
+            case PERSPECTIVE -> FIXED_ANGLE;
+            case FIXED_ANGLE -> TRUE_ISOMETRIC;
+            case TRUE_ISOMETRIC -> FREECAM;
+            case FREECAM -> PERSPECTIVE;
+        };
     }
 }

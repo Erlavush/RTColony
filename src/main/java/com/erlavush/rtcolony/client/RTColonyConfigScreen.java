@@ -14,6 +14,7 @@ public final class RTColonyConfigScreen extends Screen {
     private static final float EDGE_PAN_SENSITIVITY_MAX = 3.0F;
 
     private final Screen parent;
+    private Button terrainStabilizationButton;
 
     public RTColonyConfigScreen(Screen parent) {
         super(Component.translatable("rtcolony.config.title"));
@@ -38,14 +39,26 @@ public final class RTColonyConfigScreen extends Screen {
 
         this.addRenderableWidget(new EdgePanningSensitivitySlider(centerX - buttonWidth / 2, y + 24, buttonWidth, buttonHeight));
 
-        this.addRenderableWidget(Button.builder(terrainStabilizationLabel(), button -> {
+        this.addRenderableWidget(Button.builder(terrainFollowingLabel(), button -> {
+                    Minecraft minecraft = Minecraft.getInstance();
+                    boolean next = !RTColonyClientConfig.get(minecraft).terrainFollowingEnabled();
+                    RTColonyClientConfig.setTerrainFollowingEnabled(minecraft, next);
+                    button.setMessage(terrainFollowingLabel());
+                    this.terrainStabilizationButton.active = next;
+                })
+                .bounds(centerX - buttonWidth / 2, y + 48, buttonWidth, buttonHeight)
+                .build());
+
+        this.terrainStabilizationButton = this.addRenderableWidget(Button.builder(terrainStabilizationLabel(), button -> {
                     Minecraft minecraft = Minecraft.getInstance();
                     boolean next = !RTColonyClientConfig.get(minecraft).terrainStabilizationEnabled();
                     RTColonyClientConfig.setTerrainStabilizationEnabled(minecraft, next);
                     button.setMessage(terrainStabilizationLabel());
                 })
-                .bounds(centerX - buttonWidth / 2, y + 48, buttonWidth, buttonHeight)
+                .bounds(centerX - buttonWidth / 2, y + 72, buttonWidth, buttonHeight)
                 .build());
+        this.terrainStabilizationButton.active =
+                RTColonyClientConfig.get(Minecraft.getInstance()).terrainFollowingEnabled();
 
         this.addRenderableWidget(Button.builder(horizontalOrbitLabel(), button -> {
                     Minecraft minecraft = Minecraft.getInstance();
@@ -53,7 +66,7 @@ public final class RTColonyConfigScreen extends Screen {
                     RTColonyClientConfig.setInvertLockedPlacementOrbitHorizontal(minecraft, next);
                     button.setMessage(horizontalOrbitLabel());
                 })
-                .bounds(centerX - buttonWidth / 2, y + 98, buttonWidth, buttonHeight)
+                .bounds(centerX - buttonWidth / 2, y + 112, buttonWidth, buttonHeight)
                 .build());
 
         this.addRenderableWidget(Button.builder(verticalOrbitLabel(), button -> {
@@ -62,7 +75,7 @@ public final class RTColonyConfigScreen extends Screen {
                     RTColonyClientConfig.setInvertLockedPlacementOrbitVertical(minecraft, next);
                     button.setMessage(verticalOrbitLabel());
                 })
-                .bounds(centerX - buttonWidth / 2, y + 122, buttonWidth, buttonHeight)
+                .bounds(centerX - buttonWidth / 2, y + 136, buttonWidth, buttonHeight)
                 .build());
 
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> this.minecraft.setScreen(this.parent))
@@ -85,7 +98,7 @@ public final class RTColonyConfigScreen extends Screen {
                 this.font,
                 Component.translatable("rtcolony.config.section.locked_placement"),
                 this.width / 2,
-                Math.max(30, this.height / 4 + 56),
+                Math.max(30, this.height / 4 + 80),
                 0xA0A0A0
         );
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -134,6 +147,15 @@ public final class RTColonyConfigScreen extends Screen {
         return Component.translatable(
                 "rtcolony.config.terrain_stabilization",
                 Component.translatable(RTColonyClientConfig.get(Minecraft.getInstance()).terrainStabilizationEnabled()
+                        ? "rtcolony.config.value.enabled"
+                        : "rtcolony.config.value.disabled")
+        );
+    }
+
+    private static Component terrainFollowingLabel() {
+        return Component.translatable(
+                "rtcolony.config.terrain_following",
+                Component.translatable(RTColonyClientConfig.get(Minecraft.getInstance()).terrainFollowingEnabled()
                         ? "rtcolony.config.value.enabled"
                         : "rtcolony.config.value.disabled")
         );

@@ -124,6 +124,9 @@ dependencies {
     compileOnly("maven.modrinth:sodium:${sodium_version}") {
         transitive = false
     }
+    compileOnly("maven.modrinth:XeEZ3fK2:${freecam_version_id}") {
+        transitive = false
+    }
 
     localRuntime("com.ldtteam:minecolonies:${minecolonies_version}") {
         exclude group: 'mezz.jei'
@@ -135,6 +138,9 @@ dependencies {
         transitive = false
     }
     localRuntime("maven.modrinth:sodium:${sodium_version}") {
+        transitive = false
+    }
+    localRuntime("maven.modrinth:XeEZ3fK2:${freecam_version_id}") {
         transitive = false
     }
 
@@ -163,6 +169,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             structurize_version_range : structurize_version_range,
             jade_version_range        : jade_version_range,
             sodium_version_range      : sodium_version_range,
+            freecam_version_range     : freecam_version_range,
     ]
     inputs.properties replaceProperties
     expand replaceProperties

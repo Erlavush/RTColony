@@ -45,12 +45,7 @@ public final class RTColonyClientEvents {
         }
 
         while (RTColonyKeyMappings.CYCLE_CAMERA_MODE.consumeClick()) {
-            suppressAutoEnableForCurrentWorld();
-            if (RtsModeState.isEnabled()) {
-                RtsCameraState.cycleMode();
-            } else {
-                RtsModeState.setEnabled(true);
-            }
+            cycleCameraModeFromInput();
         }
 
         if (!RtsModeState.isEnabled()) {
@@ -77,6 +72,27 @@ public final class RTColonyClientEvents {
         }
 
         RtsCameraState.ensureActive(minecraft.player);
+        RtsCameraState.synchronizeFreecamState();
+        if (RtsCameraState.isFreecam()) {
+            RtsCutawayState.clear();
+            RtsSodiumCutaway.clear();
+            if (minecraft.screen == null
+                    && minecraft.isWindowActive()
+                    && !minecraft.mouseHandler.isMouseGrabbed()) {
+                minecraft.mouseHandler.grabMouse();
+            }
+            return;
+        }
+
+        if (RtsCameraState.isTransitioningFromFreecam()) {
+            RtsCutawayState.clear();
+            RtsSodiumCutaway.clear();
+            if (minecraft.screen == null) {
+                minecraft.mouseHandler.releaseMouse();
+            }
+            return;
+        }
+
         if (minecraft.screen == null) {
             minecraft.mouseHandler.releaseMouse();
             updateEdgePanning(minecraft);
@@ -85,13 +101,14 @@ public final class RTColonyClientEvents {
         boolean followingTarget =
                 RtsTargetingState.tickFollow(minecraft);
 
+        RTColonyClientConfig.Config cameraConfig = RTColonyClientConfig.get(minecraft);
         if (!followingTarget
                 && !RtsBuildDrawer.isPlacementLocked()
-                && !RtsCameraState.isTrueIsometric()) {
+                && RtsCameraState.usesTerrainFollowing()
+                && cameraConfig.terrainFollowingEnabled()) {
             RtsCameraState.updateTerrainHeight(
                     minecraft.level,
-                    RTColonyClientConfig.get(minecraft)
-                            .terrainStabilizationEnabled()
+                    cameraConfig.terrainStabilizationEnabled()
             );
         }
 
@@ -110,9 +127,19 @@ public final class RTColonyClientEvents {
         WORLD_ACTIVATION.suppressForCurrentWorld();
     }
 
+    public static void cycleCameraModeFromInput() {
+        suppressAutoEnableForCurrentWorld();
+        if (RtsModeState.isEnabled()) {
+            RtsCameraState.cycleMode();
+        } else {
+            RtsModeState.setEnabled(true);
+        }
+    }
+
     @SubscribeEvent
     public static void onMovementInputUpdate(MovementInputUpdateEvent event) {
-        if (!RtsModeState.isEnabled()) {
+        if (!RtsModeState.isEnabled()
+                || event.getEntity() != Minecraft.getInstance().player) {
             return;
         }
 
@@ -130,6 +157,15 @@ public final class RTColonyClientEvents {
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!RtsModeState.isEnabled() || Minecraft.getInstance().screen != null) {
+            return;
+        }
+
+        if (RtsCameraState.isFreecam()) {
+            return;
+        }
+
+        if (RtsCameraState.isTransitioningFromFreecam()) {
+            event.setCanceled(true);
             return;
         }
 
@@ -163,8 +199,10 @@ public final class RTColonyClientEvents {
         int textWidth = minecraft.font.width(modeLabel);
         guiGraphics.fill(6, 6, textWidth + 14, 22, 0xA0000000);
         guiGraphics.drawString(minecraft.font, modeLabel, 10, 10, 0xFFFFFF, false);
-        RtsSelectionHud.render(minecraft, guiGraphics);
-        RtsBuildDrawer.render(minecraft, guiGraphics);
+        if (!RtsCameraState.isFreecam() && !RtsCameraState.isTransitioningFromFreecam()) {
+            RtsSelectionHud.render(minecraft, guiGraphics);
+            RtsBuildDrawer.render(minecraft, guiGraphics);
+        }
     }
 
     @SubscribeEvent
@@ -178,7 +216,9 @@ public final class RTColonyClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (!RtsModeState.isEnabled()) {
+        if (!RtsModeState.isEnabled()
+                || RtsCameraState.isFreecam()
+                || RtsCameraState.isTransitioningFromFreecam()) {
             return;
         }
 
@@ -215,9 +255,12 @@ public final class RTColonyClientEvents {
     }
 
     private static Component rtsModeLabel() {
-        return Component.translatable(RtsCameraState.isTrueIsometric()
-                ? "rtcolony.hud.rts_mode.isometric"
-                : "rtcolony.hud.rts_mode.perspective");
+        return Component.translatable(switch (RtsCameraState.getMode()) {
+            case PERSPECTIVE -> "rtcolony.hud.rts_mode.perspective";
+            case FIXED_ANGLE -> "rtcolony.hud.rts_mode.fixed_angle";
+            case TRUE_ISOMETRIC -> "rtcolony.hud.rts_mode.isometric";
+            case FREECAM -> "rtcolony.hud.rts_mode.freecam";
+        });
     }
 
     private static void updateEdgePanning(Minecraft minecraft) {

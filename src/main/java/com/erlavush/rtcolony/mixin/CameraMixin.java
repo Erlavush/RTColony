@@ -26,7 +26,9 @@ public abstract class CameraMixin {
 
     @Inject(method = "setup", at = @At("TAIL"))
     private void rtcolony$setupRtsCamera(BlockGetter level, Entity entity, boolean detached, boolean thirdPersonReverse, float partialTick, CallbackInfo ci) {
-        if (!RtsModeState.isEnabled() || !RtsCameraState.isActive()) {
+        if (!RtsModeState.isEnabled()
+                || !RtsCameraState.isActive()
+                || !RtsCameraState.ownsRtsCamera()) {
             return;
         }
 
