@@ -34,6 +34,17 @@ Load the project JDK and verify it:
 source ./dev-env.sh
 ```
 
+If Java 21 is installed elsewhere, set `RTCOLONY_JAVA_HOME` to your JDK directory
+before loading the environment (the directory must contain both `bin/java` and
+`bin/javac`):
+
+```bash
+export RTCOLONY_JAVA_HOME=/path/to/jdk-21
+source ./dev-env.sh
+```
+
+Use that same JDK directory for IntelliJ's Project SDK and Gradle JVM.
+
 Build and run all automated tests:
 
 ```bash
